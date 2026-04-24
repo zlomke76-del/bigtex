@@ -561,7 +561,35 @@ h1 {
   gap: 36px;
   align-items: start;
 }
+/* PANEL WITH IMAGE */
+.panelWithImage {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 
+/* Image area */
+.panelImage {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+}
+
+.panelImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+
+  /* subtle polish */
+  filter: brightness(0.9) contrast(1.05);
+}
+
+/* Text content */
+.panelContent {
+  padding: 28px;
+}
 .panel {
   background: linear-gradient(145deg, var(--navy) 0%, #102d70 100%);
   color: white;
