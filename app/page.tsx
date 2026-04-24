@@ -26,7 +26,7 @@ export default function HomePage() {
       </header>
 
       <section id="top" className="hero">
-        <video className="heroVideo" autoPlay muted loop playsInline preload="none">
+        <video className="heroVideo" autoPlay muted loop playsInline preload="metadata" aria-hidden="true">
           <source src="/video/pool_01.mp4" type="video/mp4" />
         </video>
 
@@ -80,9 +80,7 @@ export default function HomePage() {
 
         <div className="lanes">
           <div className="lane">
-            <div className="laneMedia">
-              <img src="/images/residential_pool_01.png" alt="Residential pool" />
-            </div>
+            <div className="laneMedia laneMediaResidential" aria-hidden="true" />
             <div className="laneTop">Homeowners</div>
             <h3>Get what you need. Fast.</h3>
             <p>
@@ -92,7 +90,7 @@ export default function HomePage() {
           </div>
 
           <div className="lane highlight">
-            <div className="laneMedia">
+            <div className="laneMedia" aria-hidden="true">
               <video autoPlay muted loop playsInline preload="metadata">
                 <source src="/video/delivery_01.mp4" type="video/mp4" />
               </video>
@@ -106,9 +104,7 @@ export default function HomePage() {
           </div>
 
           <div id="parts" className="lane">
-            <div className="laneMedia">
-              <img src="/images/speciality_parts_01.png" alt="Pool parts" />
-            </div>
+            <div className="laneMedia laneMediaParts" aria-hidden="true" />
             <div className="laneTop">Specialty Parts</div>
             <h3>Find what others can’t.</h3>
             <p>
