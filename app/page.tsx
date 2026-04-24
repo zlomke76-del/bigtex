@@ -54,6 +54,8 @@ const operatingSteps = [
 
 const proofPoints = ["Houston supply support", "Commercial routing help", "Hard-to-find parts", "Fast fulfillment path"];
 
+const contactChips = ["Same-day coordination", "Houston delivery", "Commercial support", "Hard-to-find parts"];
+
 export default function HomePage() {
   return (
     <main>
@@ -186,11 +188,16 @@ export default function HomePage() {
           <div className="contactBackdrop" aria-hidden="true" />
           <div className="contactContent">
             <div className="eyebrow">Houston supply support</div>
-            <h2>Need supplies fast? Call Big Tex.</h2>
+            <h2>Routes don’t wait. Neither should your supply.</h2>
             <p>
               Chemicals, parts, delivery support, and hard-to-find items sourced for Houston pool operations. Send the
               details and Big Tex will help identify the right product and the fastest practical path to fulfillment.
             </p>
+            <div className="contactChips" aria-label="Fast support options">
+              {contactChips.map((chip) => (
+                <span key={chip}>{chip}</span>
+              ))}
+            </div>
             <p className="contactDetail">{contact.address}</p>
             <p className="contactDetail">{contact.email}</p>
           </div>
