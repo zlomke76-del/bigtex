@@ -1,8 +1,56 @@
 const contact = {
   phone: "(832) 859-9678",
+  phoneHref: "+18328599678",
   email: "will@bigtexpoolsupplies.com",
   address: "5829 West Sam Houston Parkway N, Suite 1105, Houston, TX 77041",
 };
+
+const supplyLanes = [
+  {
+    label: "Homeowners",
+    title: "Get what you need. Fast.",
+    body:
+      "Chemicals, filters, cleaners, and essentials to keep your pool clean, balanced, and ready without overbuying or guessing.",
+    image: "/images/residential_pool_01.png",
+    alt: "Residential swimming pool",
+  },
+  {
+    label: "Service & Commercial",
+    title: "Keep routes moving.",
+    body:
+      "Reliable supply for service companies, apartments, HOAs, hotels, and operators who cannot afford delays, stockouts, or wrong parts.",
+    video: "/video/delivery_01.mp4",
+    highlight: true,
+  },
+  {
+    label: "Speciality Parts",
+    title: "Find what others can’t.",
+    body:
+      "Valves, baskets, seals, filters, pumps, cleaner parts, and hard-to-source components identified and sourced correctly.",
+    image: "/images/speciality_parts_01.png",
+    alt: "Pool parts and components",
+    id: "parts",
+  },
+];
+
+const operatingSteps = [
+  {
+    title: "1. Identify the need",
+    body: "Retail order, commercial supply request, delivery need, or specialty part.",
+  },
+  {
+    title: "2. Confirm availability",
+    body: "Check stock, source options, delivery timing, and any missing information.",
+  },
+  {
+    title: "3. Coordinate fulfillment",
+    body: "Prepare pickup, ordering, sourcing, or local delivery support.",
+  },
+  {
+    title: "4. Keep pools running",
+    body: "Reduce delays, missed items, and wasted time across Houston pool operations.",
+  },
+];
 
 export default function HomePage() {
   return (
@@ -14,7 +62,7 @@ export default function HomePage() {
             <span>Big Tex Pool Supplies</span>
           </a>
 
-          <div className="navLinks">
+          <div className="navLinks" aria-label="Primary navigation">
             <a href="#supplies">Supplies</a>
             <a href="#commercial">Commercial</a>
             <a href="#parts">Parts</a>
@@ -27,17 +75,14 @@ export default function HomePage() {
 
       <section id="top" className="hero">
         <video className="heroVideo" autoPlay muted loop playsInline preload="metadata" aria-hidden="true">
-          <source src="/video/pool_01.mp4" type="video/mp4" />
+          <source src="/video/delivery_01.mp4" type="video/mp4" />
         </video>
-
         <div className="heroOverlay" />
 
         <div className="heroInner">
-          <div>
+          <div className="heroCopy">
             <div className="eyebrow">Houston pool supply, sourcing, and delivery support</div>
-
             <h1>The pool supplies Houston operators depend on.</h1>
-
             <p className="lede">
               Big Tex Pool Supplies helps homeowners, pool service companies, and commercial properties get the chemicals,
               equipment, replacement parts, and hard-to-find items they need—quickly, accurately, and without chasing
@@ -45,7 +90,7 @@ export default function HomePage() {
             </p>
 
             <div className="heroActions">
-              <a className="button buttonPrimary" href={`tel:${contact.phone}`}>
+              <a className="button buttonPrimary" href={`tel:${contact.phoneHref}`}>
                 Call Big Tex
               </a>
               <a className="button buttonSecondary" href="#commercial">
@@ -54,7 +99,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <aside className="heroCard">
+          <aside className="heroCard" aria-label="What Big Tex handles">
             <h2>What we handle</h2>
             <ul className="checks">
               <li>Pool chemicals, maintenance supplies, and equipment</li>
@@ -79,98 +124,48 @@ export default function HomePage() {
         <div className="flowHint">Start with how you operate</div>
 
         <div className="lanes">
-  {/* LEFT — Homeowners */}
-  <div className="lane">
-    <div className="laneMedia">
-      <img
-        src="/images/residential_pool_01.png"
-        alt="Residential swimming pool"
-      />
-    </div>
-
-    <div className="laneTop">Homeowners</div>
-    <h3>Get what you need. Fast.</h3>
-    <p>
-      Chemicals, filters, cleaners, and essentials to keep your pool clean,
-      balanced, and ready without overbuying or guessing.
-    </p>
-  </div>
-
-  {/* MIDDLE — KEEP EXACTLY AS YOU HAVE (video) */}
-  <div className="lane highlight">
-    <div className="laneMedia">
-      <video autoPlay muted loop playsInline preload="metadata">
-        <source src="/video/delivery_01.mp4" type="video/mp4" />
-      </video>
-    </div>
-
-    <div className="laneTop">Service & Commercial</div>
-    <h3>Keep routes moving.</h3>
-    <p>
-      Reliable supply for service companies, apartments, HOAs, hotels, and
-      operators who cannot afford delays, stockouts, or wrong parts.
-    </p>
-  </div>
-
-  {/* RIGHT — Specialty Parts */}
-  <div className="lane">
-    <div className="laneMedia">
-      <img
-        src="/images/speciality_parts_01.png"
-        alt="Pool parts and components"
-      />
-    </div>
-
-    <div className="laneTop">Specialty Parts</div>
-    <h3>Find what others can’t.</h3>
-    <p>
-      Valves, baskets, seals, filters, pumps, cleaner parts, and hard-to-source
-      components identified and sourced correctly.
-    </p>
-  </div>
-</div>
+          {supplyLanes.map((lane) => (
+            <article key={lane.label} id={lane.id} className={`lane${lane.highlight ? " laneHighlight" : ""}`}>
+              <div className="laneMedia">
+                {lane.video ? (
+                  <video autoPlay muted loop playsInline preload="metadata" aria-hidden="true">
+                    <source src={lane.video} type="video/mp4" />
+                  </video>
+                ) : (
+                  <img src={lane.image} alt={lane.alt} />
+                )}
+              </div>
+              <div className="laneTop">{lane.label}</div>
+              <h3>{lane.title}</h3>
+              <p>{lane.body}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section id="commercial" className="band commercialBand">
         <div className="section split">
           <div className="panel panelWithImage">
-  <div className="panelImage">
-    <img src="/images/repair_01.png" alt="Pool equipment repair and service" />
-  </div>
-
-  <div className="panelContent">
-    <div className="eyebrow">Operational support</div>
-
-    <h2>More than a supply counter. A partner in pool operations.</h2>
-
-    <p>
-      Big Tex is built for customers who cannot afford delays: service teams with
-      routes to complete, properties that need pools operational, and homeowners
-      who need the right answer the first time.
-    </p>
-  </div>
-</div>
-
-          <div className="steps">
-            <div className="step">
-              <strong>1. Identify the need</strong>
-              Retail order, commercial supply request, delivery need, or specialty part.
+            <div className="panelImage">
+              <img src="/images/repair_01.png" alt="Pool equipment repair and service" />
             </div>
-
-            <div className="step">
-              <strong>2. Confirm availability</strong>
-              Check stock, source options, delivery timing, and any missing information.
+            <div className="panelContent">
+              <div className="eyebrow">Operational support</div>
+              <h2>More than a supply counter. A partner in pool operations.</h2>
+              <p>
+                Big Tex is built for customers who cannot afford delays: service teams with routes to complete,
+                properties that need pools operational, and homeowners who need the right answer the first time.
+              </p>
             </div>
+          </div>
 
-            <div className="step">
-              <strong>3. Coordinate fulfillment</strong>
-              Prepare pickup, ordering, sourcing, or local delivery support.
-            </div>
-
-            <div className="step">
-              <strong>4. Keep pools running</strong>
-              Reduce delays, missed items, and wasted time across Houston pool operations.
-            </div>
+          <div className="steps" aria-label="Fulfillment process">
+            {operatingSteps.map((step) => (
+              <div className="step" key={step.title}>
+                <strong>{step.title}</strong>
+                <span>{step.body}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -187,9 +182,14 @@ export default function HomePage() {
             <p className="contactDetail">{contact.email}</p>
           </div>
 
-          <a className="button buttonPrimary" href={`mailto:${contact.email}`}>
-            Email Big Tex
-          </a>
+          <div className="contactActions">
+            <a className="button buttonPrimary" href={`tel:${contact.phoneHref}`}>
+              Call {contact.phone}
+            </a>
+            <a className="button buttonSecondary contactEmail" href={`mailto:${contact.email}`}>
+              Email Big Tex
+            </a>
+          </div>
         </div>
       </section>
 
