@@ -52,6 +52,8 @@ const operatingSteps = [
   },
 ];
 
+const proofPoints = ["Houston supply support", "Commercial routing help", "Hard-to-find parts", "Fast fulfillment path"];
+
 export default function HomePage() {
   return (
     <main>
@@ -151,15 +153,24 @@ export default function HomePage() {
             </div>
             <div className="panelContent">
               <div className="eyebrow">Operational support</div>
-              <h2>More than a supply counter. A partner in pool operations.</h2>
+              <h2>Built for pool operators who cannot afford delays.</h2>
               <p>
-                Big Tex is built for customers who cannot afford delays: service teams with routes to complete,
-                properties that need pools operational, and homeowners who need the right answer the first time.
+                Big Tex helps service teams, properties, and homeowners move from “we need this fixed” to the right
+                product, part, or delivery path without chasing multiple vendors.
               </p>
+              <div className="proofChips" aria-label="Big Tex support strengths">
+                {proofPoints.map((point) => (
+                  <span key={point}>{point}</span>
+                ))}
+              </div>
             </div>
           </div>
 
           <div className="steps" aria-label="Fulfillment process">
+            <div className="stepsIntro">
+              <div className="eyebrow eyebrowDark">How it works</div>
+              <h2>From request to fulfillment, Big Tex keeps it moving.</h2>
+            </div>
             {operatingSteps.map((step) => (
               <div className="step" key={step.title}>
                 <strong>{step.title}</strong>
@@ -171,12 +182,14 @@ export default function HomePage() {
       </section>
 
       <section id="contact" className="section contactSection">
-        <div className="contact">
-          <div>
-            <h2>Need supplies, delivery support, or a hard-to-find part?</h2>
+        <div className="contact contactWithImage">
+          <div className="contactBackdrop" aria-hidden="true" />
+          <div className="contactContent">
+            <div className="eyebrow">Houston supply support</div>
+            <h2>Need supplies fast? Call Big Tex.</h2>
             <p>
-              Call, email, or send the part details. Big Tex will help identify the right product and the fastest
-              practical path to fulfillment.
+              Chemicals, parts, delivery support, and hard-to-find items sourced for Houston pool operations. Send the
+              details and Big Tex will help identify the right product and the fastest practical path to fulfillment.
             </p>
             <p className="contactDetail">{contact.address}</p>
             <p className="contactDetail">{contact.email}</p>
