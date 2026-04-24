@@ -66,37 +66,43 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="supplies" className="section">
+      <section id="supplies" className="section sectionElevated">
         <div className="sectionHeader">
-          <h2>Clear supply paths for every customer.</h2>
+          <div className="eyebrow eyebrowDark">Supply lanes</div>
+          <h2>Clear supply paths. No guesswork.</h2>
           <p>
-            Whether you’re maintaining one backyard pool or managing routes across Houston, Big Tex helps you get the
-            right products, the right parts, and the right support without unnecessary friction.
+            Choose the path that matches how you operate. Big Tex helps get the right products, the right parts, and the
+            right support moving without unnecessary delays.
           </p>
         </div>
 
-        <div className="grid3">
-          <div className="card">
-            <h3>Retail & Homeowner Supplies</h3>
+        <div className="flowHint">Start with how you operate</div>
+
+        <div className="lanes">
+          <div className="lane">
+            <div className="laneTop">Homeowners</div>
+            <h3>Get what you need. Fast.</h3>
             <p>
-              Everyday chemicals, filters, cleaners, tools, and maintenance essentials for keeping pools clean, safe, and
-              ready to use.
+              Chemicals, filters, cleaners, and essentials to keep your pool clean, balanced, and ready without
+              overbuying or guessing.
             </p>
           </div>
 
-          <div className="card">
-            <h3>Commercial & Service Accounts</h3>
+          <div className="lane highlight">
+            <div className="laneTop">Service & Commercial</div>
+            <h3>Keep routes moving.</h3>
             <p>
-              Supply support for pool service companies, apartments, HOAs, hotels, and property operators who need
-              dependable fulfillment.
+              Reliable supply for service companies, apartments, HOAs, hotels, and operators who cannot afford delays,
+              stockouts, or wrong parts.
             </p>
           </div>
 
-          <div id="parts" className="card">
-            <h3>Parts & Specialty Sourcing</h3>
+          <div id="parts" className="lane">
+            <div className="laneTop">Specialty Parts</div>
+            <h3>Find what others can’t.</h3>
             <p>
-              Help locating valves, sealers, baskets, filter components, cleaner parts, pumps, and other hard-to-find
-              equipment.
+              Valves, baskets, seals, filters, pumps, cleaner parts, and hard-to-source components identified and sourced
+              correctly.
             </p>
           </div>
         </div>
