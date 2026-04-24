@@ -133,14 +133,23 @@ export default function HomePage() {
 
       <section id="commercial" className="band commercialBand">
         <div className="section split">
-          <div className="panel">
-            <div className="eyebrow">Operational support</div>
-            <h2>More than a supply counter. A partner in pool operations.</h2>
-            <p>
-              Big Tex is built for customers who cannot afford delays: service teams with routes to complete, properties
-              that need pools operational, and homeowners who need the right answer the first time.
-            </p>
-          </div>
+          <div className="panel panelWithImage">
+  <div className="panelImage">
+    <img src="/images/repair_01.png" alt="Pool equipment repair and service" />
+  </div>
+
+  <div className="panelContent">
+    <div className="eyebrow">Operational support</div>
+
+    <h2>More than a supply counter. A partner in pool operations.</h2>
+
+    <p>
+      Big Tex is built for customers who cannot afford delays: service teams with
+      routes to complete, properties that need pools operational, and homeowners
+      who need the right answer the first time.
+    </p>
+  </div>
+</div>
 
           <div className="steps">
             <div className="step">
