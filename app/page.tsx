@@ -1,3 +1,7 @@
+"use client";
+
+import { FormEvent, useMemo, useState } from "react";
+
 const contact = {
   phone: "(832) 859-9678",
   phoneHref: "+18328599678",
@@ -53,10 +57,72 @@ const operatingSteps = [
 ];
 
 const proofPoints = ["Houston supply support", "Commercial routing help", "Hard-to-find parts", "Fast fulfillment path"];
+const contactChips = ["Photo ID help", "Houston delivery", "Commercial support", "Hard-to-find parts"];
+const quickPrompts = ["Pump is humming but not starting", "Water pressure is low", "Cleaner part broke", "Need a valve or fitting"];
 
-const contactChips = ["Same-day coordination", "Houston delivery", "Commercial support", "Hard-to-find parts"];
+type IntakeMode = "photo" | "ask";
+
+function getGuidedResponse(question: string) {
+  const text = question.toLowerCase();
+
+  if (!question.trim()) {
+    return "Tell us what is happening with the pool, equipment, or part. A short note is enough to start narrowing the path.";
+  }
+
+  if (text.includes("pump") || text.includes("humming") || text.includes("motor")) {
+    return "This sounds pump-related. A photo of the pump label, capacitor area, basket lid, or the failed part can help Big Tex narrow the replacement path quickly.";
+  }
+
+  if (text.includes("pressure") || text.includes("flow") || text.includes("circulation")) {
+    return "Low pressure or weak circulation can point to filter, valve, basket, pump, or cleaner-side issues. A photo of the equipment pad and the part in question is the fastest next step.";
+  }
+
+  if (text.includes("cleaner") || text.includes("vacuum") || text.includes("hose")) {
+    return "Cleaner issues often come down to small replacement parts that are hard to describe by name. Upload a close photo and include the cleaner brand if visible.";
+  }
+
+  if (text.includes("valve") || text.includes("fitting") || text.includes("seal") || text.includes("gasket")) {
+    return "That is exactly the kind of part request where a photo helps. Send the part, the connection points, and any visible numbers so Big Tex can source the right fit.";
+  }
+
+  if (text.includes("commercial") || text.includes("route") || text.includes("property") || text.includes("hoa")) {
+    return "For route or property support, include the item needed, timing pressure, and whether pickup or delivery is preferred. Big Tex can help turn that into a fulfillment path.";
+  }
+
+  return "Good intake start. Add a photo if you have one, then include your contact info so Big Tex can identify the right product, part, or delivery path.";
+}
 
 export default function HomePage() {
+  const [mode, setMode] = useState<IntakeMode>("photo");
+  const [question, setQuestion] = useState("");
+  const [description, setDescription] = useState("");
+  const [name, setName] = useState("");
+  const [replyTo, setReplyTo] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const guidedResponse = useMemo(() => getGuidedResponse(question), [question]);
+
+  const mailSubject = encodeURIComponent("Pool part help request");
+  const mailBody = encodeURIComponent(
+    [
+      "Pool part help request",
+      "",
+      `Name: ${name || ""}`,
+      `Reply to: ${replyTo || ""}`,
+      `Photo selected: ${fileName || "No photo selected"}`,
+      `Question: ${question || ""}`,
+      `Description: ${description || ""}`,
+      "",
+      "Please attach the part photo before sending if it did not attach automatically from the website.",
+    ].join("\n"),
+  );
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitted(true);
+  }
+
   return (
     <main>
       <header className="header">
@@ -71,7 +137,7 @@ export default function HomePage() {
             <a href="#commercial">Commercial</a>
             <a href="#parts">Parts</a>
             <a href="#contact" className="cta">
-              Contact
+              Part Help
             </a>
           </div>
         </nav>
@@ -97,8 +163,8 @@ export default function HomePage() {
               <a className="button buttonPrimary" href={`tel:${contact.phoneHref}`}>
                 Call Big Tex
               </a>
-              <a className="button buttonSecondary" href="#commercial">
-                Commercial Supply Support
+              <a className="button buttonSecondary" href="#contact">
+                Upload Part Photo
               </a>
             </div>
           </div>
@@ -184,14 +250,15 @@ export default function HomePage() {
       </section>
 
       <section id="contact" className="section contactSection">
-        <div className="contact contactWithImage">
+        <div className="contact contactWithImage intakeContact">
           <div className="contactBackdrop" aria-hidden="true" />
+
           <div className="contactContent">
-            <div className="eyebrow">Houston supply support</div>
-            <h2>Routes don’t wait. Neither should your supply.</h2>
+            <div className="eyebrow">Big Tex Part Finder</div>
+            <h2>Don’t know the part? Send it or ask.</h2>
             <p>
-              Chemicals, parts, delivery support, and hard-to-find items sourced for Houston pool operations. Send the
-              details and Big Tex will help identify the right product and the fastest practical path to fulfillment.
+              Upload a photo, describe the problem, or ask what you need. Big Tex will help identify the right product,
+              replacement part, or supply path so the pool gets back online faster.
             </p>
             <div className="contactChips" aria-label="Fast support options">
               {contactChips.map((chip) => (
@@ -202,14 +269,107 @@ export default function HomePage() {
             <p className="contactDetail">{contact.email}</p>
           </div>
 
-          <div className="contactActions">
-            <a className="button buttonPrimary" href={`tel:${contact.phoneHref}`}>
-              Call {contact.phone}
-            </a>
-            <a className="button buttonSecondary contactEmail" href={`mailto:${contact.email}`}>
-              Email Big Tex
-            </a>
-          </div>
+          <form className="intakePanel" onSubmit={handleSubmit}>
+            <div className="intakeTopline">
+              <span className="liveDot" />
+              Intake open for Houston pool operators
+            </div>
+
+            <div className="intakeTabs" role="tablist" aria-label="Part finder options">
+              <button type="button" className={mode === "photo" ? "active" : ""} onClick={() => setMode("photo")}>
+                Upload photo
+              </button>
+              <button type="button" className={mode === "ask" ? "active" : ""} onClick={() => setMode("ask")}>
+                Ask first
+              </button>
+            </div>
+
+            {mode === "photo" ? (
+              <label className="uploadBox">
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
+                />
+                <span className="uploadIcon">＋</span>
+                <strong>{fileName || "Upload or take a photo"}</strong>
+                <small>Part, label, equipment pad, valve, basket, cleaner, seal, or fitting.</small>
+              </label>
+            ) : (
+              <div className="askBox">
+                <label htmlFor="part-question">What is happening?</label>
+                <textarea
+                  id="part-question"
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  placeholder="Example: Pump is humming but not starting. I need the right part today."
+                  rows={4}
+                />
+                <div className="quickPrompts" aria-label="Common questions">
+                  {quickPrompts.map((prompt) => (
+                    <button type="button" key={prompt} onClick={() => setQuestion(prompt)}>
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+                <div className="solaceLite">
+                  <span>Guided intake</span>
+                  <p>{guidedResponse}</p>
+                </div>
+              </div>
+            )}
+
+            <label className="fieldLabel" htmlFor="part-description">
+              Short note
+            </label>
+            <textarea
+              id="part-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Brand, model, urgency, pickup or delivery, commercial route details..."
+              rows={3}
+            />
+
+            <div className="fieldGrid">
+              <div>
+                <label className="fieldLabel" htmlFor="lead-name">
+                  Name
+                </label>
+                <input id="lead-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" />
+              </div>
+              <div>
+                <label className="fieldLabel" htmlFor="lead-reply">
+                  Phone or email
+                </label>
+                <input
+                  id="lead-reply"
+                  value={replyTo}
+                  onChange={(event) => setReplyTo(event.target.value)}
+                  placeholder="Best reply method"
+                />
+              </div>
+            </div>
+
+            <div className="intakeActions">
+              <button className="button buttonPrimary" type="submit">
+                Get Help Fast
+              </button>
+              <a className="button buttonSecondary" href={`mailto:${contact.email}?subject=${mailSubject}&body=${mailBody}`}>
+                Email Request
+              </a>
+            </div>
+
+            {submitted && (
+              <div className="intakeResult" role="status">
+                <strong>Request staged.</strong>
+                <span>
+                  Call Big Tex now for fastest response, or use Email Request to send the details. Backend lead storage can
+                  be wired next to capture this form automatically.
+                </span>
+              </div>
+            )}
+          </form>
         </div>
       </section>
 
