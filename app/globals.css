@@ -105,14 +105,21 @@ a {
   height: 100%;
   object-fit: cover;
   z-index: 0;
+  filter: brightness(1.05) contrast(1.1) saturate(1.1);
 }
 
 .heroOverlay {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(135deg, rgba(11, 31, 77, 0.9), rgba(23, 78, 166, 0.58)),
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.22), transparent 35%);
+    linear-gradient(
+      90deg,
+      rgba(11, 31, 77, 0.78) 0%,
+      rgba(11, 31, 77, 0.55) 40%,
+      rgba(11, 31, 77, 0.25) 70%,
+      rgba(11, 31, 77, 0.15) 100%
+    ),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 40%);
   z-index: 1;
 }
 
@@ -142,6 +149,7 @@ h1 {
   line-height: 0.95;
   letter-spacing: -0.06em;
   margin: 16px 0 22px;
+  text-shadow: 0 6px 30px rgba(0, 0, 0, 0.35);
 }
 
 .lede {
@@ -184,7 +192,7 @@ h1 {
   border-radius: 28px;
   padding: 28px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
 }
 
 .heroCard h2 {
@@ -215,7 +223,7 @@ h1 {
 }
 
 .sectionHeader {
-  max-width: 800px;
+  max-width: 840px;
   margin-bottom: 34px;
 }
 
@@ -320,8 +328,14 @@ h1 {
 }
 
 .contact p {
-  margin: 0;
+  margin: 0 0 10px;
   color: #dce7fb;
+  line-height: 1.6;
+  max-width: 760px;
+}
+
+.contactDetail {
+  font-weight: 700;
 }
 
 .footer {
