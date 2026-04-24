@@ -79,32 +79,48 @@ export default function HomePage() {
         <div className="flowHint">Start with how you operate</div>
 
         <div className="lanes">
+
+          {/* 1 — Homeowners */}
           <div className="lane">
+            <div className="laneMedia">
+              <img src="/images/residential_pool_01.png" alt="Residential pool" />
+            </div>
             <div className="laneTop">Homeowners</div>
             <h3>Get what you need. Fast.</h3>
             <p>
-              Chemicals, filters, cleaners, and essentials to keep your pool clean, balanced, and ready without
-              overbuying or guessing.
+              Chemicals, filters, cleaners, and essentials to keep your pool clean,
+              balanced, and ready without overbuying or guessing.
             </p>
           </div>
 
+          {/* 2 — Service & Commercial */}
           <div className="lane highlight">
+            <div className="laneMedia">
+              <video autoPlay muted loop playsInline>
+                <source src="/video/delivery_01.mp4" type="video/mp4" />
+              </video>
+            </div>
             <div className="laneTop">Service & Commercial</div>
             <h3>Keep routes moving.</h3>
             <p>
-              Reliable supply for service companies, apartments, HOAs, hotels, and operators who cannot afford delays,
-              stockouts, or wrong parts.
+              Reliable supply for service companies, apartments, HOAs, hotels, and operators
+              who cannot afford delays, stockouts, or wrong parts.
             </p>
           </div>
 
+          {/* 3 — Specialty Parts */}
           <div id="parts" className="lane">
+            <div className="laneMedia">
+              <img src="/images/speciality_parts_01.png" alt="Pool parts" />
+            </div>
             <div className="laneTop">Specialty Parts</div>
             <h3>Find what others can’t.</h3>
             <p>
-              Valves, baskets, seals, filters, pumps, cleaner parts, and hard-to-source components identified and sourced
-              correctly.
+              Valves, baskets, seals, filters, pumps, cleaner parts, and hard-to-source
+              components identified and sourced correctly.
             </p>
           </div>
+
         </div>
       </section>
 
