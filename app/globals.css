@@ -1185,3 +1185,55 @@ h1 {
     min-height: 150px;
   }
 }
+
+.responseNote {
+  display: inline-flex;
+  margin: 4px 0 14px !important;
+  padding: 8px 12px;
+  color: #ffffff !important;
+  background: rgba(230, 57, 70, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.guideButton {
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 11px 12px;
+  color: white;
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 10px 22px rgba(11, 31, 77, 0.15);
+}
+
+.guideButton:disabled,
+.intakeActions .button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.intakeResult.success {
+  background: rgba(33, 150, 83, 0.12);
+  border-color: rgba(33, 150, 83, 0.24);
+}
+
+.intakeResult.success strong {
+  color: #167044;
+}
+
+.intakeResult.error {
+  background: rgba(230, 57, 70, 0.1);
+  border-color: rgba(230, 57, 70, 0.24);
+}
+
+.intakeActions .buttonPrimary {
+  padding-left: 12px;
+  padding-right: 12px;
+}
