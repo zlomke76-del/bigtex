@@ -147,7 +147,7 @@ video {
   padding: 92px 22px 84px;
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
-  gap: 48px;
+  gap: 56px; /* increased spacing */
   align-items: center;
 }
 
@@ -210,20 +210,33 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
+/* FIXED SECTION */
 .heroCard {
-  padding: 28px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  align-self: center;           /* anchors vertically */
+  justify-self: end;            /* pushes to right edge */
+  width: 100%;
+  max-width: 430px;
+
+  padding: 30px 32px;           /* more breathing room */
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.16),
+    rgba(255, 255, 255, 0.08)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 28px;
+
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
+
+  transform: translateY(18px);  /* lowers it slightly into alignment */
 }
 
 .heroCard h2 {
-  margin: 0 0 14px;
+  margin: 0 0 20px;
   font-size: 25px;
+  line-height: 1.1;
 }
-
 .checks {
   display: grid;
   gap: 14px;
