@@ -100,7 +100,7 @@ export default function HomePage() {
   <div className="lane highlight">
     <div className="laneMedia">
       <video autoPlay muted loop playsInline preload="metadata">
-        <source src="/video/pool_01.mp4" type="video/mp4" />
+        <source src="/video/delivery_01" type="video/mp4" />
       </video>
     </div>
 
