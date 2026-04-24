@@ -144,6 +144,10 @@ a {
   font-size: 13px;
 }
 
+.eyebrowDark {
+  color: var(--blue);
+}
+
 h1 {
   font-size: clamp(42px, 6vw, 72px);
   line-height: 0.95;
@@ -222,6 +226,14 @@ h1 {
   padding: 76px 22px;
 }
 
+.sectionElevated {
+  padding-top: 84px;
+  padding-bottom: 86px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(23, 78, 166, 0.08), transparent 32%),
+    linear-gradient(to bottom, #f7f9fc, #ffffff);
+}
+
 .sectionHeader {
   max-width: 840px;
   margin-bottom: 34px;
@@ -230,7 +242,7 @@ h1 {
 .sectionHeader h2 {
   font-size: clamp(32px, 4vw, 48px);
   letter-spacing: -0.05em;
-  margin: 0 0 12px;
+  margin: 10px 0 12px;
   color: var(--navy);
 }
 
@@ -239,6 +251,118 @@ h1 {
   font-size: 19px;
   line-height: 1.6;
   margin: 0;
+}
+
+.flowHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  margin-bottom: 24px;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.flowHint::after {
+  content: "→";
+  color: var(--red);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.lanes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 26px;
+}
+
+.lane {
+  position: relative;
+  overflow: hidden;
+  background: white;
+  border: 1px solid #e5ebf4;
+  border-radius: 26px;
+  padding: 30px;
+  box-shadow: 0 14px 40px rgba(20, 38, 70, 0.06);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.lane::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(23, 78, 166, 0.08), transparent 42%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.lane:hover {
+  transform: translateY(-6px);
+  border-color: rgba(23, 78, 166, 0.22);
+  box-shadow: 0 22px 60px rgba(20, 38, 70, 0.12);
+}
+
+.lane:hover::before {
+  opacity: 1;
+}
+
+.laneTop,
+.lane h3,
+.lane p {
+  position: relative;
+  z-index: 1;
+}
+
+.laneTop {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 12px;
+}
+
+.lane h3 {
+  margin: 0 0 12px;
+  font-size: 25px;
+  line-height: 1.1;
+  color: var(--navy);
+  letter-spacing: -0.03em;
+}
+
+.lane p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.lane.highlight {
+  border: 2px solid rgba(230, 57, 70, 0.88);
+  box-shadow: 0 22px 64px rgba(230, 57, 70, 0.13);
+}
+
+.lane.highlight::after {
+  content: "Priority lane";
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: rgba(230, 57, 70, 0.1);
+  color: var(--red);
+  border: 1px solid rgba(230, 57, 70, 0.18);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.lane.highlight h3 {
+  color: var(--red);
 }
 
 .grid3 {
@@ -351,7 +475,8 @@ h1 {
 
   .heroInner,
   .split,
-  .grid3 {
+  .grid3,
+  .lanes {
     grid-template-columns: 1fr;
   }
 
@@ -361,6 +486,12 @@ h1 {
 
   .navLinks {
     display: none;
+  }
+
+  .lane.highlight::after {
+    position: static;
+    display: inline-flex;
+    margin-top: 18px;
   }
 
   .contact {
