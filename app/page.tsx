@@ -75,7 +75,7 @@ export default function HomePage() {
 
       <section id="top" className="hero">
         <video className="heroVideo" autoPlay muted loop playsInline preload="metadata" aria-hidden="true">
-          <source src="/video/delivery_01.mp4" type="video/mp4" />
+          <source src="/video/pool_01.mp4" type="video/mp4" />
         </video>
         <div className="heroOverlay" />
 
