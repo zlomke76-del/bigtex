@@ -476,34 +476,36 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="pool-help" className="section helpSection">
-        <div className="sectionHeader">
-          <div className="eyebrow eyebrowDark">Houston pool help</div>
-          <h2>Problem pages that lead customers back to Big Tex.</h2>
-          <p>
-            These pages are practical intake doors for customers searching with a specific pool problem. Each one helps
-            them understand the likely direction, then routes them into Part Help, Commercial Express, a call, or a visit.
-          </p>
+      <section id="pool-help" className="section helpSection compactHelpSection">
+        <div className="helpRail">
+          <div className="helpRailCopy">
+            <div className="eyebrow eyebrowDark">Houston pool help</div>
+            <h2>Need help with a specific pool problem?</h2>
+            <p>
+              Use these quick paths when you already know the issue. Each page feeds back into Part Help,
+              Commercial Express, a call, or a visit.
+            </p>
+          </div>
+
+          <div className="helpRailActions">
+            <a className="button buttonPrimary" href="#contact">Start Part Finder</a>
+            <a className="button buttonSoft" href="/houston/pool-parts-houston">Pool Parts Houston</a>
+          </div>
         </div>
 
-        <div className="helpGrid" aria-label="Houston pool supply help pages">
-          {seoHelpPages.map((page) => (
-            <a className="helpCard" key={page.href} href={page.href}>
+        <div className="helpQuickLinks" aria-label="Houston pool supply help pages">
+          {seoHelpPages.slice(0, 6).map((page) => (
+            <a key={page.href} href={page.href}>
               <span>{page.label}</span>
               <strong>{page.title}</strong>
-              <p>{page.body}</p>
             </a>
           ))}
         </div>
 
-        <div className="helpCta">
-          <div>
-            <strong>Not sure which page fits?</strong>
-            <span>Start with a photo or short note and Big Tex will narrow the right path.</span>
-          </div>
-          <a className="button buttonPrimary" href="#contact">
-            Start Part Finder
-          </a>
+        <div className="helpTextLinks" aria-label="Additional Houston pool help pages">
+          {seoHelpPages.slice(6).map((page) => (
+            <a key={page.href} href={page.href}>{page.title}</a>
+          ))}
         </div>
       </section>
 
