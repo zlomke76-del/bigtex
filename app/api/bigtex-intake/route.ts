@@ -10,6 +10,8 @@ const DEFAULT_MODEL = "openai/gpt-4.1-mini";
 const STORAGE_BUCKET = "bigtex-part-uploads";
 
 type IntakeMode = "photo" | "ask" | string;
+type Urgency = "today" | "this_week" | "checking" | string;
+type NeedType = "identify_part" | "check_availability" | "delivery_pickup" | "commercial_route" | string;
 
 type Classification = {
   guidance: string;
@@ -45,8 +47,9 @@ function clean(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function fallbackGuidance(question: string): Classification {
-  const text = question.toLowerCase();
+function fallbackGuidance(input: string): Classification {
+  const text = input.toLowerCase();
+
   if (text.includes("pump") || text.includes("humming") || text.includes("motor")) {
     return {
       guidance:
@@ -65,6 +68,28 @@ function fallbackGuidance(question: string): Classification {
       likely_category: "flow_or_pressure",
       urgency: "normal",
       suggested_next_step: "Upload the equipment pad and the part in question.",
+      sales_signal: "unknown",
+    };
+  }
+
+  if (text.includes("cleaner") || text.includes("vacuum") || text.includes("hose")) {
+    return {
+      guidance:
+        "Cleaner issues often come down to small replacement parts that are hard to describe by name. Upload a close photo and include the cleaner brand if visible.",
+      likely_category: "cleaner_parts",
+      urgency: "normal",
+      suggested_next_step: "Upload a photo of the broken cleaner part and any visible brand markings.",
+      sales_signal: "unknown",
+    };
+  }
+
+  if (text.includes("valve") || text.includes("fitting") || text.includes("seal") || text.includes("gasket")) {
+    return {
+      guidance:
+        "That is exactly the kind of request where a photo helps. Send the part, the connection points, and any visible numbers so Big Tex can source the right fit.",
+      likely_category: "valve_fitting_or_seal",
+      urgency: "normal",
+      suggested_next_step: "Upload a close photo of the part and the connection points.",
       sales_signal: "unknown",
     };
   }
@@ -90,12 +115,41 @@ function fallbackGuidance(question: string): Classification {
   };
 }
 
-async function classifyWithGateway(input: { question: string; description?: string; mode?: IntakeMode }) {
+function mapUrgency(option: Urgency): Classification["urgency"] {
+  if (option === "today") return "high";
+  if (option === "this_week") return "normal";
+  if (option === "checking") return "low";
+  return "unknown";
+}
+
+function getNeedContext(needType: NeedType) {
+  switch (needType) {
+    case "identify_part":
+      return "Need type: identify a part.";
+    case "check_availability":
+      return "Need type: check availability.";
+    case "delivery_pickup":
+      return "Need type: delivery or pickup.";
+    case "commercial_route":
+      return "Need type: commercial route support.";
+    default:
+      return "Need type: not selected.";
+  }
+}
+
+async function classifyWithGateway(input: {
+  message: string;
+  mode?: IntakeMode;
+  urgency?: Urgency;
+  needType?: NeedType;
+}) {
   const apiKey = getEnv("AI_GATEWAY_API_KEY");
   const model = getEnv("BIGTEX_LLM_MODEL") || DEFAULT_MODEL;
-  const base = fallbackGuidance(`${input.question || ""} ${input.description || ""}`);
+  const context = `${input.message || ""}\n${getNeedContext(input.needType || "")}\nUrgency option: ${input.urgency || "not_selected"}`;
+  const base = fallbackGuidance(context);
+  const optionUrgency = mapUrgency(input.urgency || "");
 
-  if (!apiKey) return base;
+  if (!apiKey) return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
 
   try {
     const response = await fetch(AI_GATEWAY_URL, {
@@ -110,11 +164,11 @@ async function classifyWithGateway(input: { question: string; description?: stri
           {
             role: "system",
             content:
-              "You are Big Tex Pool Supplies guided intake. Help Houston pool homeowners, service techs, and commercial operators identify the category of part or supply need. Do not diagnose safety issues, do not claim inventory availability, and do not overpromise. Push toward photo upload, contact capture, and Big Tex follow-up. Return only compact JSON with keys: guidance, likely_category, urgency, suggested_next_step, sales_signal.",
+              "You are Big Tex Pool Supplies guided intake for Houston pool homeowners, service techs, and commercial operators. Interpret the user's pool supply or part issue, suggest the most likely category, and push toward photo upload, contact capture, and Big Tex follow-up. Do not claim inventory availability. Do not diagnose safety issues. Do not overpromise same-day availability. Return only compact JSON with keys: guidance, likely_category, urgency, suggested_next_step, sales_signal. Guidance must be no more than 3 short sentences and always end with a practical next step.",
           },
           {
             role: "user",
-            content: `Mode: ${input.mode || "ask"}\nQuestion: ${input.question || ""}\nDescription: ${input.description || ""}`,
+            content: `Mode: ${input.mode || "ask"}\nMessage: ${input.message || ""}\n${getNeedContext(input.needType || "")}\nUrgency option: ${input.urgency || "not_selected"}`,
           },
         ],
         text: {
@@ -138,13 +192,19 @@ async function classifyWithGateway(input: { question: string; description?: stri
       }),
     });
 
-    if (!response.ok) return base;
+    if (!response.ok) return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
+
     const payload = await response.json();
     const text = payload.output_text || payload.output?.[0]?.content?.[0]?.text || "";
     const parsed = JSON.parse(text) as Classification;
-    return { ...base, ...parsed };
+
+    return {
+      ...base,
+      ...parsed,
+      urgency: optionUrgency === "unknown" ? parsed.urgency || base.urgency : optionUrgency,
+    };
   } catch {
-    return base;
+    return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
   }
 }
 
@@ -171,35 +231,39 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     if (body?.action !== "guide") return json({ error: "Unsupported action." }, 400);
 
-    const question = String(body.question || "").trim();
-    const classification = await classifyWithGateway({ question, mode: "ask" });
+    const message = String(body.message || body.question || "").trim();
+    const urgency = String(body.urgency || "").trim();
+    const needType = String(body.needType || "").trim();
+    const classification = await classifyWithGateway({ message, mode: "ask", urgency, needType });
+
     return json({ guidance: classification.guidance, classification });
   }
 
   const formData = await request.formData();
   const name = clean(formData.get("name"));
   const replyTo = clean(formData.get("replyTo"));
-  const question = clean(formData.get("question"));
-  const description = clean(formData.get("description"));
+  const message = clean(formData.get("message"));
   const mode = clean(formData.get("mode")) || "photo";
+  const urgencyOption = clean(formData.get("urgency"));
+  const needType = clean(formData.get("needType"));
   const source = clean(formData.get("source")) || "website";
   const photo = formData.get("photo");
 
   if (!replyTo) return json({ error: "Please add a phone number or email so Big Tex can reply." }, 400);
-  if (!description && !question && !(photo instanceof File && photo.size > 0)) {
-    return json({ error: "Please add a photo, question, or short note." }, 400);
+  if (!message && !(photo instanceof File && photo.size > 0)) {
+    return json({ error: "Please add a photo or tell Big Tex what you need help with." }, 400);
   }
 
   const supabase = getSupabase();
-  const classification = await classifyWithGateway({ question, description, mode });
+  const classification = await classifyWithGateway({ message, mode, urgency: urgencyOption, needType });
 
   const { data: lead, error: insertError } = await supabase
     .from("part_intake_leads")
     .insert({
       name: name || null,
       reply_to: replyTo,
-      question: question || null,
-      description: description || null,
+      question: mode === "ask" ? message || null : null,
+      description: message || null,
       mode,
       source,
       status: "new",
@@ -218,13 +282,30 @@ export async function POST(request: NextRequest) {
     return json({ error: insertError?.message || "Could not save this request." }, 500);
   }
 
+  await supabase.from("part_intake_events").insert({
+    lead_id: lead.id,
+    event_type: "intake_details",
+    event_payload: {
+      urgency_option: urgencyOption || null,
+      need_type: needType || null,
+      mode,
+      source,
+    },
+  });
+
   if (photo instanceof File && photo.size > 0) {
     try {
       const uploaded = await uploadPhoto(photo, lead.id);
       const { error: updateError } = await supabase
         .from("part_intake_leads")
-        .update({ photo_path: uploaded.path, photo_name: uploaded.name, photo_mime_type: uploaded.mimeType, photo_size_bytes: uploaded.size })
+        .update({
+          photo_path: uploaded.path,
+          photo_name: uploaded.name,
+          photo_mime_type: uploaded.mimeType,
+          photo_size_bytes: uploaded.size,
+        })
         .eq("id", lead.id);
+
       if (updateError) throw updateError;
     } catch (error) {
       await supabase.from("part_intake_events").insert({
@@ -238,7 +319,7 @@ export async function POST(request: NextRequest) {
   await supabase.from("part_intake_events").insert({
     lead_id: lead.id,
     event_type: "lead_created",
-    event_payload: { mode, source, classification },
+    event_payload: { mode, source, urgency_option: urgencyOption || null, need_type: needType || null, classification },
   });
 
   return json({
