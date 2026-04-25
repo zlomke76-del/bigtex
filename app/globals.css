@@ -327,10 +327,8 @@ h1 {
 .intakeTabs button, .quickPrompts button, .optionGroup button { appearance: none; border: 0; cursor: pointer; font: inherit; }
 .intakeTabs button { padding: 10px 12px; color: var(--muted); background: transparent; border-radius: 13px; font-size: 13px; font-weight: 900; }
 .intakeTabs button.active { color: #fff; background: linear-gradient(135deg, var(--navy), var(--blue)); box-shadow: 0 10px 24px rgba(11,31,77,.17); }
-.uploadBox { display: grid; place-items: center; min-height: 136px; margin-bottom: 12px; padding: 18px; text-align: center; background: linear-gradient(180deg, #fff, #f6faff), radial-gradient(circle at 50% 0%, rgba(87,199,255,.2), transparent 42%); border: 2px dashed rgba(23,78,166,.28); border-radius: 22px; cursor: pointer; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
-.uploadBox:hover { border-color: rgba(23,78,166,.48); box-shadow: 0 14px 34px rgba(11,31,77,.08); }
+.uploadBox { display: grid; place-items: center; min-height: 136px; margin-bottom: 12px; padding: 18px; text-align: center; background: linear-gradient(180deg, #fff, #f6faff), radial-gradient(circle at 50% 0%, rgba(87,199,255,.2), transparent 42%); border: 2px dashed rgba(23,78,166,.28); border-radius: 22px; cursor: pointer; }
 .uploadBox.hasPreview { min-height: auto; padding: 12px; }
-.uploadBox.isAnalyzing { border-color: rgba(230,57,70,.55); box-shadow: 0 0 0 5px rgba(230,57,70,.08), 0 16px 36px rgba(11,31,77,.1); }
 .uploadBox input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
 .uploadPreview { width: 100%; height: 132px; display: block; object-fit: cover; border-radius: 16px; margin-bottom: 10px; box-shadow: 0 14px 30px rgba(11,31,77,.16); }
 .uploadIcon { width: 44px; height: 44px; display: grid; place-items: center; margin-bottom: 10px; color: #fff; background: var(--red); border-radius: 16px; font-size: 28px; line-height: 1; box-shadow: 0 14px 30px rgba(230,57,70,.22); }
@@ -341,7 +339,6 @@ h1 {
 .intakePanel textarea { min-height: 78px; padding: 13px 14px; resize: vertical; }
 .intakePanel input { height: 44px; padding: 0 13px; }
 .intakePanel textarea:focus, .intakePanel input:focus { border-color: rgba(23,78,166,.58); box-shadow: 0 0 0 4px rgba(87,199,255,.16); }
-.intakePanel textarea:disabled, .intakePanel input:disabled { opacity: .72; cursor: not-allowed; }
 .fieldHelp { margin: 7px 0 8px; color: var(--muted); font-size: 12px; line-height: 1.35; }
 .quickPrompts { display: flex; flex-wrap: wrap; gap: 7px; margin: 8px 0 10px; }
 .quickPrompts button { padding: 7px 10px; color: var(--blue); background: rgba(23,78,166,.08); border: 1px solid rgba(23,78,166,.12); border-radius: 999px; font-size: 11px; font-weight: 800; }
@@ -365,16 +362,9 @@ h1 {
 .intakeActions .buttonSecondary { color: var(--navy); background: rgba(23,78,166,.08); border: 1px solid rgba(23,78,166,.14); }
 .intakeResult { display: grid; gap: 4px; margin-top: 12px; padding: 12px 13px; color: var(--navy); background: rgba(87,199,255,.13); border: 1px solid rgba(87,199,255,.26); border-radius: 16px; font-size: 13px; line-height: 1.4; }
 .intakeResult strong { color: var(--red); }
+.intakeResult.success { background: rgba(33,150,83,.12); border-color: rgba(33,150,83,.24); }
+.intakeResult.success strong { color: #167044; }
 .intakeResult.error { background: rgba(230,57,70,.1); border-color: rgba(230,57,70,.24); }
-.submittedPanel { display: grid; gap: 10px; margin-top: 14px; padding: 18px; background: linear-gradient(180deg, rgba(231, 248, 239, .95), rgba(255,255,255,.96)); border: 1px solid rgba(33,150,83,.24); border-radius: 20px; box-shadow: 0 16px 38px rgba(11,31,77,.08); }
-.submittedPanel > span { color: #167044; font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
-.submittedPanel h3 { margin: 0; color: var(--navy); font-size: 22px; line-height: 1.1; letter-spacing: -.03em; }
-.submittedPanel p { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.5; }
-.referenceBadge { display: inline-flex; width: fit-content; padding: 7px 10px; color: var(--navy); background: rgba(23,78,166,.08); border: 1px solid rgba(23,78,166,.14); border-radius: 999px; font-size: 12px; font-weight: 900; }
-.submittedActions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
-.submittedActions .button { width: 100%; border: 0; cursor: pointer; font-size: 14px; }
-.submittedActions .buttonSecondary { color: var(--navy); background: rgba(23,78,166,.08); border: 1px solid rgba(23,78,166,.14); }
-.submittedPanel small { color: var(--muted); font-size: 12px; line-height: 1.4; }
 
 @media (max-width: 980px) {
   .heroInner, .intakeContact { grid-template-columns: 1fr; gap: 36px; }
@@ -409,6 +399,201 @@ h1 {
   .contact { min-height: 470px; padding: 34px 24px; }
   .contact h2 { font-size: 34px; }
   .intakePanel { padding: 16px; border-radius: 22px; }
-  .fieldGrid, .intakeActions, .nextStep, .submittedActions { grid-template-columns: 1fr; }
+  .fieldGrid, .intakeActions, .nextStep { grid-template-columns: 1fr; }
   .uploadBox { min-height: 140px; }
+}
+.imageObservation {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 10px;
+  color: var(--navy);
+  background: rgba(23, 78, 166, 0.06);
+  border: 1px solid rgba(23, 78, 166, 0.12);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+/* Commercial Express lane selection */
+.laneSelector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.laneSelector button {
+  appearance: none;
+  cursor: pointer;
+  min-height: 86px;
+  padding: 14px;
+  text-align: left;
+  font: inherit;
+  background: linear-gradient(180deg, #ffffff, #f7faff);
+  border: 1px solid rgba(197, 211, 230, 0.95);
+  border-radius: 18px;
+  color: var(--ink);
+  box-shadow: 0 12px 26px rgba(20, 38, 70, 0.06);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.laneSelector button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(23, 78, 166, 0.28);
+  box-shadow: 0 16px 34px rgba(20, 38, 70, 0.1);
+}
+
+.laneSelector button strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--navy);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.laneSelector button span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.laneSelector button.active {
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  border-color: rgba(23, 78, 166, 0.9);
+  box-shadow: 0 18px 38px rgba(11, 31, 77, 0.2);
+}
+
+.laneSelector button.active strong,
+.laneSelector button.active span {
+  color: #ffffff;
+}
+
+.laneSelector button.commercial.active {
+  background: linear-gradient(135deg, var(--red), #b8202b);
+  border-color: rgba(230, 57, 70, 0.95);
+  box-shadow: 0 18px 38px rgba(230, 57, 70, 0.22);
+}
+
+.panelTitle {
+  margin: 0 0 12px;
+  padding: 13px 14px;
+  background: rgba(23, 78, 166, 0.08);
+  border: 1px solid rgba(23, 78, 166, 0.12);
+  border-radius: 16px;
+}
+
+.panelTitle strong {
+  display: block;
+  color: var(--navy);
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.panelTitle span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.commercialFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.submittedPanel {
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff, #eef6ff);
+  border: 1px solid rgba(87, 199, 255, 0.28);
+  border-radius: 22px;
+  color: var(--ink);
+}
+
+.submittedPanel > span {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 7px 10px;
+  color: #167044;
+  background: rgba(33, 150, 83, 0.12);
+  border: 1px solid rgba(33, 150, 83, 0.24);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.submittedPanel h3 {
+  margin: 0 0 8px;
+  color: var(--navy);
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.submittedPanel p {
+  max-width: none;
+  margin: 0 0 12px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.referenceBadge {
+  display: inline-flex;
+  margin: 2px 0 14px;
+  padding: 8px 11px;
+  color: var(--blue);
+  background: rgba(23, 78, 166, 0.08);
+  border: 1px solid rgba(23, 78, 166, 0.14);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.submittedActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 10px 0 10px;
+}
+
+.submittedActions button {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.submittedActions .buttonSecondary {
+  color: var(--navy);
+  background: rgba(23, 78, 166, 0.08);
+  border: 1px solid rgba(23, 78, 166, 0.14);
+}
+
+.submittedPanel small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+@media (max-width: 560px) {
+  .laneSelector,
+  .commercialFields,
+  .submittedActions {
+    grid-template-columns: 1fr;
+  }
+
+  .laneSelector button {
+    min-height: auto;
+  }
 }
