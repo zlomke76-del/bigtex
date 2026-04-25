@@ -93,8 +93,7 @@ function getCustomerLaneContext(customerLane: CustomerLane, companyName?: string
       "Treat this as a high-value commercial or route-support lead focused on chemical supply, delivery, parts sourcing, emergency fulfillment, or recurring support.",
       companyName ? `Company/property: ${companyName}.` : "Company/property: not provided.",
       poolCount ? `Pools/properties: ${poolCount}.` : "Pools/properties: not provided.",
-    ].join("
-");
+    ].join("\\n");
   }
 
   return "Customer lane: Part Help / homeowner or one-off request.";
@@ -466,7 +465,7 @@ function buildPlainTextEmail(input: {
     "",
     "Recommended action",
     "Review the photo and AI direction, then call/text the customer to confirm the exact part, product path, pickup, or delivery next step.",
-  ].join("\n");
+  ].join("\\n");
 }
 
 async function createSignedPhotoUrl(supabase: ReturnType<typeof getSupabase>, photoPath: string | null) {
