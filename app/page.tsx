@@ -247,13 +247,21 @@ export default function HomePage() {
   }
 
   return (
-    <main>
-      <header className="header">
-        <nav className="nav">
-          <a className="logo" href="#top" aria-label="Big Tex Pool Supplies home"><span className="logoMark">TX</span><span>Big Tex Pool Supplies</span></a>
-          <div className="navLinks" aria-label="Primary navigation"><a href="#supplies">Supplies</a><a href="#commercial">Commercial</a><a href="#parts">Parts</a><a href="#contact" className="cta">Part Help</a></div>
-        </nav>
-      </header>
+  <main>
+    <header className="header">
+      <nav className="nav">
+        <a className="logo" href="#top" aria-label="Big Tex Pool Supplies home">
+          <span className="logoMark">TX</span>
+          <span>Big Tex Pool Supplies</span>
+        </a>
+
+        <div className="navLinks" aria-label="Primary navigation">
+          <a href="#supplies">Supplies</a>
+          <a href="#commercial">Commercial</a>
+          <a href="#contact" className="cta">Part Help</a>
+        </div>
+      </nav>
+    </header>
 
       <section id="top" className="hero">
         <video className="heroVideo" autoPlay muted loop playsInline preload="metadata" aria-hidden="true"><source src="/video/pool_01.mp4" type="video/mp4" /></video>
