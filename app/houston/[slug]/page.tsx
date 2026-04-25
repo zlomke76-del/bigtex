@@ -4,21 +4,19 @@ import { SeoProblemPage } from "../../components/SeoProblemPage";
 import { getSeoPage, seoPages, siteUrl } from "../../seo-content";
 
 type PageProps = {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 };
 
-// Pre-generate all SEO pages
 export function generateStaticParams() {
   return seoPages.map((page) => ({
     slug: page.slug,
   }));
 }
 
-// Dynamic metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = params;
+  const { slug } = await params;
   const page = getSeoPage(slug);
 
   if (!page) {
@@ -48,9 +46,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-// Page render
-export default function HoustonSeoPage({ params }: PageProps) {
-  const { slug } = params;
+export default async function HoustonSeoPage({ params }: PageProps) {
+  const { slug } = await params;
   const page = getSeoPage(slug);
 
   if (!page) {
