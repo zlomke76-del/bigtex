@@ -42,16 +42,16 @@ const operatingSteps = [
 ];
 
 const proofPoints = ["Houston supply support", "Commercial routing help", "Hard-to-find parts", "Fast fulfillment path"];
-const contactChips = ["Identify parts fast", "Same-day Houston delivery", "Commercial route support", "Hard-to-find sourcing"];
-const quickPrompts = ["Pump is humming but not starting", "Water pressure is low", "Cleaner part broke", "Need a valve or fitting"];
+const contactChips = ["Identify parts fast", "Water color guidance", "Same-day Houston delivery", "Commercial route support"];
+const quickPrompts = ["Pump is humming but not starting", "Water is green or cloudy", "Cleaner part broke", "Need a valve or fitting"];
 const urgencyOptions = [
   { value: "today", label: "Today" },
   { value: "this_week", label: "This week" },
   { value: "checking", label: "Just checking" },
 ];
 const needOptions = [
-  { value: "identify_part", label: "Identify a part" },
-  { value: "check_availability", label: "Check availability" },
+  { value: "identify_part", label: "Part / equipment" },
+  { value: "water_chemistry", label: "Water / chemicals" },
   { value: "delivery_pickup", label: "Delivery / pickup" },
   { value: "commercial_route", label: "Commercial route" },
 ];
@@ -92,7 +92,7 @@ export default function HomePage() {
   const [replyTo, setReplyTo] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [guide, setGuide] = useState(starterGuidance);
-  const [handoffMessage, setHandoffMessage] = useState("Call Will to verify the exact part before you buy.");
+  const [handoffMessage, setHandoffMessage] = useState("We can narrow the likely path here, then Big Tex can verify before you buy.");
   const [confidence, setConfidence] = useState("unknown");
   const [guideStatus, setGuideStatus] = useState<GuideStatus>("idle");
   const [status, setStatus] = useState<IntakeStatus>("idle");
@@ -100,6 +100,9 @@ export default function HomePage() {
 
   const localGuidedResponse = useMemo(() => getFallbackGuidedResponse(message), [message]);
   const activeGuidance = guideStatus === "ready" ? guide : localGuidedResponse;
+  const hasIntakeSignal = Boolean(message.trim() || file);
+  const showGuidance = hasIntakeSignal || guideStatus === "ready" || guideStatus === "error";
+  const showHandoff = hasIntakeSignal && (guideStatus === "ready" || status === "success");
   const mailSubject = encodeURIComponent("Pool part help request");
   const mailBody = encodeURIComponent([
     "Pool part help request",
@@ -118,7 +121,7 @@ export default function HomePage() {
     setFile(event.target.files?.[0] ?? null);
     setStatus("idle");
     setResultMessage("");
-    setHandoffMessage("Call Will to verify the exact part before you buy.");
+    setHandoffMessage("We can narrow the likely path here, then Big Tex can verify before you buy.");
     setConfidence("unknown");
   }
 
@@ -132,7 +135,7 @@ export default function HomePage() {
     const trimmedMessage = message.trim();
     if (!trimmedMessage) {
       setGuide(starterGuidance);
-      setHandoffMessage("Send a photo and your best reply method, then Will can verify the part and help get you the right one fast.");
+      setHandoffMessage("Send a photo and your best reply method, then Big Tex can verify the part and help get you the right one fast.");
       setConfidence("low");
       setGuideStatus("ready");
       return;
@@ -148,12 +151,12 @@ export default function HomePage() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error || "Guided intake is unavailable right now.");
       setGuide(payload.guidance || localGuidedResponse);
-      setHandoffMessage(payload.handoffMessage || "Call Will to verify the exact part before you buy.");
+      setHandoffMessage(payload.handoffMessage || "We can narrow the likely path here, then Big Tex can verify before you buy.");
       setConfidence(payload.confidence || "unknown");
       setGuideStatus("ready");
     } catch {
       setGuide(localGuidedResponse);
-      setHandoffMessage("Call Will to verify the exact part before you buy.");
+      setHandoffMessage("We can narrow the likely path here, then Big Tex can verify before you buy.");
       setConfidence("unknown");
       setGuideStatus("error");
     }
@@ -180,8 +183,8 @@ export default function HomePage() {
       if (!response.ok) throw new Error(payload?.error || "Unable to save this request right now.");
 
       setStatus("success");
-      setResultMessage(payload.message || "You’re in. Big Tex will review this and Will can verify the exact part before you buy.");
-      setHandoffMessage(payload.handoffMessage || "Call Will to verify the exact part before you buy.");
+      setResultMessage(payload.message || "You’re in. Big Tex will review this and Big Tex can verify the right part, chemical path, or supply option before you buy.");
+      setHandoffMessage(payload.handoffMessage || "We can narrow the likely path here, then Big Tex can verify before you buy.");
       setConfidence(payload.confidence || "unknown");
     } catch (error) {
       setStatus("error");
@@ -282,7 +285,7 @@ export default function HomePage() {
           <div className="contactContent">
             <div className="eyebrow">Big Tex Part Finder</div>
             <h2>Don’t know the part? Send it or ask.</h2>
-            <p>Upload a photo or tell us what is happening. Big Tex will narrow the likely part path, then Will verifies the exact fit before you buy.</p>
+            <p>Upload a photo or tell us what is happening. Big Tex will narrow the likely part, chemical, or supply path before you buy.</p>
             <div className="contactChips" aria-label="Fast support options">{contactChips.map((chip) => <span key={chip}>{chip}</span>)}</div>
             <p className="responseNote">Typical response: 10–15 minutes during business hours.</p>
             <p className="contactDetail">{contact.address}</p>
@@ -300,8 +303,8 @@ export default function HomePage() {
               <label className="uploadBox">
                 <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} />
                 <span className="uploadIcon">＋</span>
-                <strong>{file?.name || "Take a photo of the part or equipment"}</strong>
-                <small>Not sure what it is? Send what you see: part, label, equipment pad, valve, basket, seal, or fitting.</small>
+                <strong>{file?.name || "Take a photo of the part, equipment, or water"}</strong>
+                <small>Not sure what it is? Send what you see: part, label, equipment pad, valve, basket, seal, fitting, or water color.</small>
               </label>
             )}
 
@@ -313,10 +316,10 @@ export default function HomePage() {
                 setMessage(event.target.value);
                 setGuideStatus("idle");
               }}
-              placeholder="Example: Pump is humming but not starting. I need the right part today."
+              placeholder="Example: Pump is humming, water is green, or I need the right valve today."
               rows={4}
             />
-            <p className="fieldHelp">One short note is enough. Add brand, model, urgency, pickup/delivery, or commercial route details if you have them.</p>
+            <p className="fieldHelp">One short note is enough. Add brand, model, water color, urgency, pickup/delivery, or route details if you have them.</p>
 
             <div className="quickPrompts" aria-label="Common questions">
               {quickPrompts.map((prompt) => <button type="button" key={prompt} onClick={() => applyQuickPrompt(prompt)}>{prompt}</button>)}
@@ -344,18 +347,22 @@ export default function HomePage() {
             <button className="guideButton" type="button" onClick={handleGuideRequest} disabled={guideStatus === "loading"}>
               {guideStatus === "loading" ? "Checking..." : "Identify the issue"}
             </button>
-            <div className="solaceLite">
-              <span>{guideStatus === "error" ? "Fallback guidance" : "Guided intake"}</span>
-              <p>{activeGuidance}</p>
-            </div>
-
-            <div className="willHandoff">
-              <div>
-                <span>{confidence === "high" || confidence === "medium" ? "Verification step" : "Next best step"}</span>
-                <strong>{handoffMessage}</strong>
+            {showGuidance && (
+              <div className="solaceLite">
+                <span>{guideStatus === "error" ? "Fallback guidance" : "Guided intake"}</span>
+                <p>{activeGuidance}</p>
               </div>
-              <a className="callWillButton" href={`tel:${contact.phoneHref}`}>Call Will</a>
-            </div>
+            )}
+
+            {showHandoff && (
+              <div className="willHandoff">
+                <div>
+                  <span>{confidence === "high" || confidence === "medium" ? "Verification step" : "Next best step"}</span>
+                  <strong>{handoffMessage}</strong>
+                </div>
+                <a className="callWillButton" href={`tel:${contact.phoneHref}`}>Call Big Tex</a>
+              </div>
+            )}
 
             <div className="fieldGrid">
               <div><label className="fieldLabel" htmlFor="lead-name">Name</label><input id="lead-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" /></div>
@@ -369,7 +376,7 @@ export default function HomePage() {
 
             <div className={`intakeResult ${status === "success" ? "success" : ""} ${status === "error" ? "error" : ""}`} role="status">
               <strong>{status === "success" ? "You’re in." : status === "error" ? "Couldn’t save request." : "Fastest path: photo + reply method."}</strong>
-              <span>{resultMessage || "Big Tex uses this intake to narrow the likely part path, route the request, and let Will verify before you buy."}</span>
+              <span>{resultMessage || "Big Tex uses this intake to narrow the likely part, chemical, or supply path before you buy."}</span>
             </div>
           </form>
         </div>
