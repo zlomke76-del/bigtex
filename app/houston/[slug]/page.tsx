@@ -4,20 +4,28 @@ import { SeoProblemPage } from "../../components/SeoProblemPage";
 import { getSeoPage, seoPages, siteUrl } from "../../seo-content";
 
 type PageProps = {
-  params: Promise<{ slug: string }>;
+  params: {
+    slug: string;
+  };
 };
 
+// Pre-generate all SEO pages
 export function generateStaticParams() {
-  return seoPages.map((page) => ({ slug: page.slug }));
+  return seoPages.map((page) => ({
+    slug: page.slug,
+  }));
 }
 
+// Dynamic metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug } = params;
   const page = getSeoPage(slug);
 
   if (!page) {
     return {
       title: "Houston Pool Supply Help | Big Tex Pool Supplies",
+      description:
+        "Get fast help identifying pool parts, chemicals, and equipment issues in Houston.",
     };
   }
 
@@ -40,11 +48,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function HoustonSeoPage({ params }: PageProps) {
-  const { slug } = await params;
+// Page render
+export default function HoustonSeoPage({ params }: PageProps) {
+  const { slug } = params;
   const page = getSeoPage(slug);
 
-  if (!page) notFound();
+  if (!page) {
+    notFound();
+  }
 
   return <SeoProblemPage page={page} />;
 }
