@@ -402,3 +402,15 @@ h1 {
   .fieldGrid, .intakeActions, .nextStep { grid-template-columns: 1fr; }
   .uploadBox { min-height: 140px; }
 }
+.imageObservation {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 10px;
+  color: var(--navy);
+  background: rgba(23, 78, 166, 0.06);
+  border: 1px solid rgba(23, 78, 166, 0.12);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
