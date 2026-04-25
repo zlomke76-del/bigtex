@@ -68,25 +68,25 @@ type GuideResult = {
   guidance: string;
   handoffMessage: string;
   imageReviewed?: boolean;
-  imageObservation?: string;
 };
 
-const starterGuidance = "A photo or short description is enough. Big Tex will review what you send and narrow the likely part, chemical, or supply path before you buy.";
+const starterGuidance = "A photo or short description is enough. Big Tex will narrow the likely part, chemical, or supply path before you buy.";
 
-function getFallbackGuidedResponse(message: string) {
+function getFallbackGuidedResponse(message: string, hasPhoto: boolean) {
   const text = message.toLowerCase();
+  if (!message.trim() && hasPhoto) return "Based on the photo, Big Tex can start narrowing the part, equipment, water, or supply path. Add a short note if there is timing pressure or a visible issue.";
   if (!message.trim()) return starterGuidance;
-  if (text.includes("green") || text.includes("cloudy") || text.includes("water")) return "This looks like a water or chemical guidance request. A photo of the water color plus any current chemical readings helps Big Tex point you toward the right treatment path.";
-  if (text.includes("pump") || text.includes("humming") || text.includes("motor")) return "This usually points to a pump-side part such as a capacitor, motor, lid, basket, or seal. A photo of the pump label or failed part helps confirm the exact match fast.";
+  if (text.includes("green") || text.includes("cloudy") || text.includes("water")) return "This likely points to water condition or chemical guidance. A photo of the water color plus any current chemical readings helps Big Tex point you toward the right product path.";
+  if (text.includes("pump") || text.includes("humming") || text.includes("motor")) return "This likely points to a pump-side part such as a capacitor, motor, lid, basket, or seal. A photo of the pump label or failed part helps confirm the exact match fast.";
   if (text.includes("pressure") || text.includes("flow") || text.includes("circulation")) return "Low pressure or weak circulation often points toward the filter, valve, basket, pump, or cleaner-side components. A photo of the equipment pad and visible part is the fastest next step.";
   if (text.includes("cleaner") || text.includes("vacuum") || text.includes("hose")) return "Cleaner issues often come down to small replacement parts that are hard to describe by name. Upload a close photo and include the cleaner brand if visible.";
-  if (text.includes("valve") || text.includes("fitting") || text.includes("seal") || text.includes("gasket")) return "This sounds like a valve, fitting, seal, or gasket request. Photos of the part, connection points, and any visible numbers help Big Tex confirm the right fit.";
+  if (text.includes("valve") || text.includes("fitting") || text.includes("seal") || text.includes("gasket")) return "This likely points to a valve, fitting, seal, or gasket request. Photos of the part, connection points, and any visible numbers help Big Tex confirm the right fit.";
   return "Good intake start. A photo of the part, equipment pad, label, or water color will help Big Tex identify the right product or supply path faster.";
 }
 
-function getFallbackHandoff(message: string) {
-  if (!message.trim()) return "Add a photo or short note, then Big Tex can help confirm the right next step.";
-  return "We’re pretty sure this is the right direction. Call Big Tex to confirm the exact part or product path before you buy.";
+function getFallbackHandoff(message: string, hasPhoto: boolean) {
+  if (!message.trim() && !hasPhoto) return "Add a photo or short note, then Big Tex can help confirm the right next step.";
+  return "Submit this request or call Big Tex to confirm the exact match before you buy.";
 }
 
 export default function HomePage() {
@@ -102,12 +102,16 @@ export default function HomePage() {
   const [guideStatus, setGuideStatus] = useState<GuideStatus>("idle");
   const [status, setStatus] = useState<IntakeStatus>("idle");
   const [resultMessage, setResultMessage] = useState("");
+  const [referenceId, setReferenceId] = useState("");
 
-  const localGuidedResponse = useMemo(() => getFallbackGuidedResponse(message), [message]);
-  const localHandoff = useMemo(() => getFallbackHandoff(message), [message]);
-  const hasGuidance = guideStatus === "ready" || guideStatus === "error";
+  const hasPhoto = Boolean(file);
+  const localGuidedResponse = useMemo(() => getFallbackGuidedResponse(message, hasPhoto), [message, hasPhoto]);
+  const localHandoff = useMemo(() => getFallbackHandoff(message, hasPhoto), [message, hasPhoto]);
+  const hasPreSubmitGuidance = status !== "success" && (guideStatus === "ready" || guideStatus === "error");
   const activeGuidance = guideResult?.guidance || localGuidedResponse;
   const activeHandoff = guideResult?.handoffMessage || localHandoff;
+  const guideLabel = guideResult?.imageReviewed ? "Photo-reviewed direction" : guideStatus === "error" ? "Guidance fallback" : "Likely direction";
+  const canEditIntake = status !== "success";
   const mailSubject = encodeURIComponent("Pool part help request");
   const mailBody = encodeURIComponent([
     "Pool part help request",
@@ -136,13 +140,30 @@ export default function HomePage() {
   function resetResult() {
     setStatus("idle");
     setResultMessage("");
+    setReferenceId("");
+  }
+
+  function resetGuidance() {
+    setGuideStatus("idle");
+    setGuideResult(null);
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
-    setGuideStatus("idle");
-    setGuideResult(null);
+    resetGuidance();
     resetResult();
+  }
+
+  function handleNewRequest() {
+    setMessage("");
+    setName("");
+    setReplyTo("");
+    setUrgency("today");
+    setNeedType("part_equipment");
+    setFile(null);
+    resetGuidance();
+    resetResult();
+    setMode("photo");
   }
 
   async function handleGuideRequest() {
@@ -181,7 +202,6 @@ export default function HomePage() {
         guidance: payload.guidance || localGuidedResponse,
         handoffMessage: payload.handoffMessage || localHandoff,
         imageReviewed: Boolean(payload.imageReviewed),
-        imageObservation: payload.imageObservation || "",
       });
       setGuideStatus("ready");
     } catch {
@@ -194,6 +214,7 @@ export default function HomePage() {
     event.preventDefault();
     setStatus("submitting");
     setResultMessage("");
+    setReferenceId("");
 
     try {
       const formData = new FormData();
@@ -211,8 +232,13 @@ export default function HomePage() {
       if (!response.ok) throw new Error(payload?.error || "Unable to save this request right now.");
 
       setStatus("success");
-      setResultMessage(payload.message || "You’re in. Big Tex will review this and help get you the right part or product path fast.");
-      setGuideResult({ guidance: payload.guidance || activeGuidance, handoffMessage: payload.handoffMessage || activeHandoff, imageReviewed: Boolean(payload.imageReviewed), imageObservation: payload.imageObservation || "" });
+      setResultMessage(payload.message || "Big Tex is reviewing your request and will help identify the exact part or solution.");
+      setReferenceId(payload.referenceId || "");
+      setGuideResult({
+        guidance: payload.guidance || activeGuidance,
+        handoffMessage: payload.handoffMessage || "Call now for fastest confirmation, or wait for a response during business hours.",
+        imageReviewed: Boolean(payload.imageReviewed),
+      });
       setGuideStatus("ready");
     } catch (error) {
       setStatus("error");
@@ -263,39 +289,55 @@ export default function HomePage() {
 
           <form className="intakePanel" onSubmit={handleSubmit}>
             <div className="intakeTopline"><span className="liveDot" />Intake open for Houston pool operators</div>
-            <div className="intakeTabs" role="tablist" aria-label="Part finder options"><button type="button" className={mode === "photo" ? "active" : ""} onClick={() => setMode("photo")}>Upload photo</button><button type="button" className={mode === "ask" ? "active" : ""} onClick={() => setMode("ask")}>Ask first</button></div>
+            <div className="intakeTabs" role="tablist" aria-label="Part finder options"><button type="button" className={mode === "photo" ? "active" : ""} onClick={() => { setMode("photo"); resetGuidance(); resetResult(); }}>Upload photo</button><button type="button" className={mode === "ask" ? "active" : ""} onClick={() => { setMode("ask"); resetGuidance(); resetResult(); }}>Ask first</button></div>
 
             {mode === "photo" && (
-              <label className={`uploadBox ${previewUrl ? "hasPreview" : ""}`}>
-                <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} />
+              <label className={`uploadBox ${previewUrl ? "hasPreview" : ""} ${guideStatus === "loading" ? "isAnalyzing" : ""}`}>
+                <input type="file" accept="image/*" capture="environment" disabled={!canEditIntake} onChange={handleFileChange} />
                 {previewUrl ? (<img className="uploadPreview" src={previewUrl} alt="Selected upload preview" />) : (<span className="uploadIcon">＋</span>)}
                 <strong>{file?.name || "Take a photo of the part, equipment, or water"}</strong>
-                <small>Send what you see: part, label, equipment pad, valve, basket, seal, fitting, or water color. Big Tex will review the photo first.</small>
+                <small>{guideStatus === "loading" && file ? "Analyzing photo..." : "Send what you see: part, label, equipment pad, valve, basket, seal, fitting, or water color."}</small>
               </label>
             )}
 
-            <label className="fieldLabel" htmlFor="intake-message">Tell us what you need help with</label>
-            <textarea id="intake-message" value={message} onChange={(event) => { setMessage(event.target.value); setGuideStatus("idle"); setGuideResult(null); resetResult(); }} placeholder="Example: Pump is humming but not starting. I need the right part today." rows={4} />
-            <p className="fieldHelp">One short note is enough. Add brand, model, water color, urgency, pickup/delivery, or route details if you have them.</p>
+            {status !== "success" && (
+              <>
+                <label className="fieldLabel" htmlFor="intake-message">Tell us what you need help with</label>
+                <textarea id="intake-message" value={message} disabled={!canEditIntake} onChange={(event) => { setMessage(event.target.value); resetGuidance(); resetResult(); }} placeholder="Example: Pump is humming but not starting. I need the right part today." rows={4} />
+                <p className="fieldHelp">One short note is enough. Add brand, model, water color, urgency, pickup/delivery, or route details if you have them.</p>
 
-            <div className="quickPrompts" aria-label="Common questions">{quickPrompts.map((prompt) => (<button type="button" key={prompt} onClick={() => { setMessage(prompt); setGuideStatus("idle"); setGuideResult(null); resetResult(); }}>{prompt}</button>))}</div>
+                <div className="quickPrompts" aria-label="Common questions">{quickPrompts.map((prompt) => (<button type="button" key={prompt} onClick={() => { setMessage(prompt); resetGuidance(); resetResult(); }}>{prompt}</button>))}</div>
 
-            <div className="optionGroup"><span>Urgency</span><div>{urgencyOptions.map((option) => (<button type="button" key={option.value} className={urgency === option.value ? "active" : ""} onClick={() => { setUrgency(option.value); setGuideStatus("idle"); setGuideResult(null); }}>{option.label}</button>))}</div></div>
-            <div className="optionGroup"><span>Need type</span><div>{needTypes.map((option) => (<button type="button" key={option.value} className={needType === option.value ? "active" : ""} onClick={() => { setNeedType(option.value); setGuideStatus("idle"); setGuideResult(null); }}>{option.label}</button>))}</div></div>
+                <div className="optionGroup"><span>Urgency</span><div>{urgencyOptions.map((option) => (<button type="button" key={option.value} className={urgency === option.value ? "active" : ""} onClick={() => { setUrgency(option.value); resetGuidance(); resetResult(); }}>{option.label}</button>))}</div></div>
+                <div className="optionGroup"><span>Need type</span><div>{needTypes.map((option) => (<button type="button" key={option.value} className={needType === option.value ? "active" : ""} onClick={() => { setNeedType(option.value); resetGuidance(); resetResult(); }}>{option.label}</button>))}</div></div>
 
-            <button className="guideButton" type="button" onClick={handleGuideRequest} disabled={guideStatus === "loading"}>{guideStatus === "loading" ? (file ? "Analyzing photo..." : "Checking...") : (file ? "Analyze photo" : "Identify the issue")}</button>
+                <button className="guideButton" type="button" onClick={handleGuideRequest} disabled={guideStatus === "loading"}>{guideStatus === "loading" ? (file ? "Analyzing photo..." : "Checking...") : file ? "Analyze photo" : "Identify the issue"}</button>
 
-            {hasGuidance && (
-              <div className="issueResult" role="status">
-                <span>{guideStatus === "error" ? "Guidance fallback" : guideResult?.imageReviewed ? "Photo-reviewed direction" : "Likely direction"}</span>
-                <p>{activeGuidance}</p>
-                <div className="nextStep"><strong>Next best step</strong><p>{activeHandoff}</p><a href={`tel:${contact.phoneHref}`}>Call Big Tex</a></div>
-              </div>
+                {hasPreSubmitGuidance && (
+                  <div className="issueResult" role="status">
+                    <span>{guideLabel}</span>
+                    <p>{activeGuidance}</p>
+                    <div className="nextStep"><strong>Next step</strong><p>{activeHandoff}</p><a href={`tel:${contact.phoneHref}`}>Call Big Tex</a></div>
+                  </div>
+                )}
+
+                <div className="fieldGrid"><div><label className="fieldLabel" htmlFor="lead-name">Name</label><input id="lead-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" /></div><div><label className="fieldLabel" htmlFor="lead-reply">Phone or email</label><input id="lead-reply" value={replyTo} onChange={(event) => setReplyTo(event.target.value)} placeholder="Best reply method" /></div></div>
+                <div className="intakeActions"><button className="button buttonPrimary" type="submit" disabled={status === "submitting"}>{status === "submitting" ? "Sending..." : "Submit & Get Help Fast"}</button><a className="button buttonSecondary" href={`mailto:${contact.email}?subject=${mailSubject}&body=${mailBody}`}>Email Request</a></div>
+                {status === "error" && (<div className="intakeResult error" role="status"><strong>Couldn’t save request.</strong><span>{resultMessage}</span></div>)}
+                {status === "idle" && (<div className="intakeResult" role="status"><strong>Fastest path: send a photo and a reply method.</strong><span>Big Tex uses this intake to identify the part, chemical, or supply path and follow up with the fastest practical next step.</span></div>)}
+              </>
             )}
 
-            <div className="fieldGrid"><div><label className="fieldLabel" htmlFor="lead-name">Name</label><input id="lead-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" /></div><div><label className="fieldLabel" htmlFor="lead-reply">Phone or email</label><input id="lead-reply" value={replyTo} onChange={(event) => setReplyTo(event.target.value)} placeholder="Best reply method" /></div></div>
-            <div className="intakeActions"><button className="button buttonPrimary" type="submit" disabled={status === "submitting"}>{status === "submitting" ? "Sending..." : "Submit & Get Help Fast"}</button><a className="button buttonSecondary" href={`mailto:${contact.email}?subject=${mailSubject}&body=${mailBody}`}>Email Request</a></div>
-            <div className={`intakeResult ${status === "success" ? "success" : ""} ${status === "error" ? "error" : ""}`} role="status"><strong>{status === "success" ? "You’re in." : status === "error" ? "Couldn’t save request." : "Fastest path: send a photo and a reply method."}</strong><span>{resultMessage || "Big Tex uses this intake to identify the part, chemical, or supply path and follow up with the fastest practical next step."}</span></div>
+            {status === "success" && (
+              <div className="submittedPanel" role="status">
+                <span>You’re all set</span>
+                <h3>Big Tex is reviewing your request.</h3>
+                <p>{resultMessage || "Big Tex will help identify the exact part or solution."}</p>
+                {referenceId && <div className="referenceBadge">Reference ID: {referenceId}</div>}
+                <div className="submittedActions"><a className="button buttonPrimary" href={`tel:${contact.phoneHref}`}>Call Big Tex</a><button type="button" className="button buttonSecondary" onClick={handleNewRequest}>Send another request</button></div>
+                <small>Call now for fastest confirmation, or wait for a response during business hours.</small>
+              </div>
+            )}
           </form>
         </div>
       </section>
