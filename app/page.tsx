@@ -92,6 +92,8 @@ export default function HomePage() {
   const [replyTo, setReplyTo] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [guide, setGuide] = useState(starterGuidance);
+  const [handoffMessage, setHandoffMessage] = useState("Call Will to verify the exact part before you buy.");
+  const [confidence, setConfidence] = useState("unknown");
   const [guideStatus, setGuideStatus] = useState<GuideStatus>("idle");
   const [status, setStatus] = useState<IntakeStatus>("idle");
   const [resultMessage, setResultMessage] = useState("");
@@ -116,6 +118,8 @@ export default function HomePage() {
     setFile(event.target.files?.[0] ?? null);
     setStatus("idle");
     setResultMessage("");
+    setHandoffMessage("Call Will to verify the exact part before you buy.");
+    setConfidence("unknown");
   }
 
   function applyQuickPrompt(prompt: string) {
@@ -128,6 +132,8 @@ export default function HomePage() {
     const trimmedMessage = message.trim();
     if (!trimmedMessage) {
       setGuide(starterGuidance);
+      setHandoffMessage("Send a photo and your best reply method, then Will can verify the part and help get you the right one fast.");
+      setConfidence("low");
       setGuideStatus("ready");
       return;
     }
@@ -142,9 +148,13 @@ export default function HomePage() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error || "Guided intake is unavailable right now.");
       setGuide(payload.guidance || localGuidedResponse);
+      setHandoffMessage(payload.handoffMessage || "Call Will to verify the exact part before you buy.");
+      setConfidence(payload.confidence || "unknown");
       setGuideStatus("ready");
     } catch {
       setGuide(localGuidedResponse);
+      setHandoffMessage("Call Will to verify the exact part before you buy.");
+      setConfidence("unknown");
       setGuideStatus("error");
     }
   }
@@ -170,7 +180,9 @@ export default function HomePage() {
       if (!response.ok) throw new Error(payload?.error || "Unable to save this request right now.");
 
       setStatus("success");
-      setResultMessage(payload.message || "You’re in. Big Tex will review this and help get you the right part fast.");
+      setResultMessage(payload.message || "You’re in. Big Tex will review this and Will can verify the exact part before you buy.");
+      setHandoffMessage(payload.handoffMessage || "Call Will to verify the exact part before you buy.");
+      setConfidence(payload.confidence || "unknown");
     } catch (error) {
       setStatus("error");
       setResultMessage(error instanceof Error ? error.message : "Unable to save this request right now.");
@@ -270,7 +282,7 @@ export default function HomePage() {
           <div className="contactContent">
             <div className="eyebrow">Big Tex Part Finder</div>
             <h2>Don’t know the part? Send it or ask.</h2>
-            <p>Upload a photo or tell us what is happening. Big Tex will help identify the right product, replacement part, or supply path so the pool gets back online faster.</p>
+            <p>Upload a photo or tell us what is happening. Big Tex will narrow the likely part path, then Will verifies the exact fit before you buy.</p>
             <div className="contactChips" aria-label="Fast support options">{contactChips.map((chip) => <span key={chip}>{chip}</span>)}</div>
             <p className="responseNote">Typical response: 10–15 minutes during business hours.</p>
             <p className="contactDetail">{contact.address}</p>
@@ -337,6 +349,14 @@ export default function HomePage() {
               <p>{activeGuidance}</p>
             </div>
 
+            <div className="willHandoff">
+              <div>
+                <span>{confidence === "high" || confidence === "medium" ? "Verification step" : "Next best step"}</span>
+                <strong>{handoffMessage}</strong>
+              </div>
+              <a className="callWillButton" href={`tel:${contact.phoneHref}`}>Call Will</a>
+            </div>
+
             <div className="fieldGrid">
               <div><label className="fieldLabel" htmlFor="lead-name">Name</label><input id="lead-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" /></div>
               <div><label className="fieldLabel" htmlFor="lead-reply">Phone or email</label><input id="lead-reply" value={replyTo} onChange={(event) => setReplyTo(event.target.value)} placeholder="Best reply method" /></div>
@@ -349,7 +369,7 @@ export default function HomePage() {
 
             <div className={`intakeResult ${status === "success" ? "success" : ""} ${status === "error" ? "error" : ""}`} role="status">
               <strong>{status === "success" ? "You’re in." : status === "error" ? "Couldn’t save request." : "Fastest path: photo + reply method."}</strong>
-              <span>{resultMessage || "Big Tex uses this intake to identify the part, route the request, and follow up with the fastest practical path."}</span>
+              <span>{resultMessage || "Big Tex uses this intake to narrow the likely part path, route the request, and let Will verify before you buy."}</span>
             </div>
           </form>
         </div>
