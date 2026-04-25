@@ -24,16 +24,6 @@ type Classification = {
   confidence: Confidence;
   handoff_message: string;
   image_reviewed: boolean;
-  image_observation: string;
-};
-
-type ClassifyInput = {
-  message: string;
-  mode?: IntakeMode;
-  urgency?: Urgency;
-  needType?: NeedType;
-  imageDataUrl?: string | null;
-  imageName?: string | null;
 };
 
 function getEnv(name: string) {
@@ -62,135 +52,6 @@ function clean(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeConfidence(value: unknown): Confidence {
-  if (value === "high" || value === "medium" || value === "low" || value === "unknown") return value;
-  return "unknown";
-}
-
-function callHandoff(confidence: Confidence, imageReviewed = false) {
-  if (confidence === "high" || confidence === "medium") {
-    return imageReviewed
-      ? "We’re pretty sure this is the right direction from the photo. Submit this request or call Big Tex to verify the exact match before you buy."
-      : "We’re pretty sure this is the right direction. Submit this request or call Big Tex to verify the exact match before you buy.";
-  }
-
-  return imageReviewed
-    ? "The photo helps, but Big Tex needs a clearer angle or a little more detail to confirm the right next step."
-    : "A quick photo or a little more detail will help Big Tex confirm the right next step.";
-}
-
-function fallbackGuidance(input: string, imageReviewed = false): Classification {
-  const text = input.toLowerCase();
-  const imagePrefix = imageReviewed ? "From the photo and note, " : "";
-
-  if (text.includes("green") || text.includes("cloudy") || text.includes("yellow") || text.includes("brown") || text.includes("algae") || text.includes("water")) {
-    return {
-      guidance:
-        `${imagePrefix}this looks like a water or chemical guidance request. A clear photo of the water color plus any current chemical readings will help Big Tex point you toward the right treatment path.`,
-      likely_category: "water_chemicals",
-      urgency: "normal",
-      suggested_next_step: "Submit a water photo and include any test strip or chemical reading if available.",
-      sales_signal: "homeowner",
-      confidence: "medium",
-      handoff_message: "We’re pretty sure this starts with water condition and chemical guidance. Submit this request or call Big Tex to confirm the best product path before you buy.",
-      image_reviewed: imageReviewed,
-      image_observation: imageReviewed ? "Image received for water, equipment, or part review." : "No image reviewed.",
-    };
-  }
-
-  if (text.includes("pump") || text.includes("humming") || text.includes("motor")) {
-    return {
-      guidance:
-        `${imagePrefix}this usually points to a pump-side part such as a capacitor, motor, lid, basket, or seal. A photo of the pump label or failed part helps confirm the exact match fast.`,
-      likely_category: "pump_or_motor",
-      urgency: "high",
-      suggested_next_step: "Submit a photo of the pump label, capacitor area, basket lid, or failed part.",
-      sales_signal: "unknown",
-      confidence: "medium",
-      handoff_message: "We’re pretty sure this is pump-side. Submit this request or call Big Tex to verify the exact part before you buy.",
-      image_reviewed: imageReviewed,
-      image_observation: imageReviewed ? "Image received for pump-side review." : "No image reviewed.",
-    };
-  }
-
-  if (text.includes("pressure") || text.includes("flow") || text.includes("circulation")) {
-    return {
-      guidance:
-        `${imagePrefix}low pressure or weak circulation often points toward the filter, valve, basket, pump, or cleaner-side components. A photo of the equipment pad and visible part is the fastest way to narrow it down.`,
-      likely_category: "flow_or_pressure",
-      urgency: "normal",
-      suggested_next_step: "Submit the equipment pad and the part in question.",
-      sales_signal: "unknown",
-      confidence: "medium",
-      handoff_message: "We’re pretty sure this is flow or pressure related. Submit this request or call Big Tex to verify the exact part or supply path before you buy.",
-      image_reviewed: imageReviewed,
-      image_observation: imageReviewed ? "Image received for flow or pressure review." : "No image reviewed.",
-    };
-  }
-
-  if (text.includes("cleaner") || text.includes("vacuum") || text.includes("hose")) {
-    return {
-      guidance:
-        `${imagePrefix}cleaner issues often come down to small replacement parts that are hard to describe by name. A close photo and visible brand marking can usually narrow the part quickly.`,
-      likely_category: "cleaner_parts",
-      urgency: "normal",
-      suggested_next_step: "Submit a photo of the cleaner part and any visible brand markings.",
-      sales_signal: "unknown",
-      confidence: "medium",
-      handoff_message: "We’re pretty sure this is a cleaner-part request. Submit this request or call Big Tex to verify the exact replacement before you buy.",
-      image_reviewed: imageReviewed,
-      image_observation: imageReviewed ? "Image received for cleaner-part review." : "No image reviewed.",
-    };
-  }
-
-  if (text.includes("valve") || text.includes("fitting") || text.includes("seal") || text.includes("gasket")) {
-    return {
-      guidance:
-        `${imagePrefix}this likely points to a valve, fitting, seal, or gasket issue. Photos of the part, connection points, and any visible numbers help Big Tex confirm the right fit.`,
-      likely_category: "valve_fitting_or_seal",
-      urgency: "normal",
-      suggested_next_step: "Submit a close photo of the part and connection points.",
-      sales_signal: "unknown",
-      confidence: "medium",
-      handoff_message: "We’re pretty sure this is a fitting or seal path. Submit this request or call Big Tex to verify the exact match before you buy.",
-      image_reviewed: imageReviewed,
-      image_observation: imageReviewed ? "Image received for valve, fitting, seal, or gasket review." : "No image reviewed.",
-    };
-  }
-
-  if (text.includes("commercial") || text.includes("route") || text.includes("property") || text.includes("hoa")) {
-    return {
-      guidance:
-        `${imagePrefix}this looks like a route or property support request. Include the item needed, timing pressure, and whether pickup or delivery is preferred so Big Tex can route it fast.`,
-      likely_category: "commercial_supply",
-      urgency: "high",
-      suggested_next_step: "Submit the request with contact details for fast follow-up.",
-      sales_signal: "commercial_property",
-      confidence: "medium",
-      handoff_message: "Big Tex can help verify the fastest route, pickup, or sourcing path. Submit this request or call to confirm timing and availability.",
-      image_reviewed: imageReviewed,
-      image_observation: imageReviewed ? "Image received for commercial supply review." : "No image reviewed.",
-    };
-  }
-
-  return {
-    guidance:
-      imageReviewed
-        ? "The photo was received, but the exact part or product path still needs a little more context. Add any visible brand, model, label, or water test reading so Big Tex can narrow it faster."
-        : "Good intake start. A photo of the part, equipment pad, label, or water color will help Big Tex identify the right product or supply path faster.",
-    likely_category: "general_part_request",
-    urgency: "unknown",
-    suggested_next_step: imageReviewed ? "Submit the request or add a clearer angle if possible." : "Upload a photo and submit the request.",
-    sales_signal: "unknown",
-    confidence: imageReviewed ? "low" : "low",
-    handoff_message: imageReviewed
-      ? "The photo helps, but Big Tex should verify the exact part or product path before you buy."
-      : "A quick photo or more detail will help Big Tex confirm the right part or product path.",
-    image_reviewed: imageReviewed,
-    image_observation: imageReviewed ? "Image received, but visual identification was not specific enough." : "No image reviewed.",
-  };
-}
-
 function mapUrgency(option: Urgency): Classification["urgency"] {
   if (option === "today") return "high";
   if (option === "this_week") return "normal";
@@ -213,19 +74,141 @@ function getNeedContext(needType: NeedType) {
   }
 }
 
+function defaultHandoff(confidence: Confidence, imageReviewed: boolean) {
+  if (confidence === "low") {
+    return imageReviewed
+      ? "A clearer photo or one more detail will help Big Tex confirm the right next step."
+      : "Upload a photo or add a little more detail so Big Tex can confirm the right next step.";
+  }
+
+  return imageReviewed
+    ? "Submit this request or call Big Tex to confirm the exact match before you buy."
+    : "Submit this request or call Big Tex to confirm the exact part or product path before you buy.";
+}
+
+function fallbackGuidance(input: string, imageReviewed = false): Classification {
+  const text = input.toLowerCase();
+
+  if (text.includes("green") || text.includes("cloudy") || text.includes("yellow") || text.includes("brown") || text.includes("algae") || text.includes("water")) {
+    return {
+      guidance: imageReviewed
+        ? "Based on the photo and note, this likely points to water condition or chemical guidance. A current test reading will help confirm the right product path."
+        : "This likely points to water condition or chemical guidance. A clear photo of the water color plus any current chemical readings will help narrow the right product path.",
+      likely_category: "water_chemicals",
+      urgency: "normal",
+      suggested_next_step: "Submit this request with a photo and any test strip or chemical readings if available.",
+      sales_signal: "homeowner",
+      confidence: "medium",
+      handoff_message: defaultHandoff("medium", imageReviewed),
+      image_reviewed: imageReviewed,
+    };
+  }
+
+  if (text.includes("pump") || text.includes("humming") || text.includes("motor")) {
+    return {
+      guidance: imageReviewed
+        ? "Based on the photo and note, this likely points to a pump-side issue. The exact match may depend on the label, capacitor area, lid, basket, seal, or motor details."
+        : "This likely points to a pump-side part such as a capacitor, motor, lid, basket, or seal. A photo of the pump label or failed part helps confirm the exact match fast.",
+      likely_category: "pump_or_motor",
+      urgency: "high",
+      suggested_next_step: "Submit this request with the pump label or failed-part photo.",
+      sales_signal: "unknown",
+      confidence: "medium",
+      handoff_message: defaultHandoff("medium", imageReviewed),
+      image_reviewed: imageReviewed,
+    };
+  }
+
+  if (text.includes("pressure") || text.includes("flow") || text.includes("circulation")) {
+    return {
+      guidance: imageReviewed
+        ? "Based on the photo and note, this likely points to a flow or pressure path. The filter, valve, basket, pump, or cleaner-side components may need confirmation."
+        : "Low pressure or weak circulation often points toward the filter, valve, basket, pump, or cleaner-side components. A photo of the equipment pad and visible part is the fastest next step.",
+      likely_category: "flow_or_pressure",
+      urgency: "normal",
+      suggested_next_step: "Submit this request with the equipment pad and visible part photo.",
+      sales_signal: "unknown",
+      confidence: "medium",
+      handoff_message: defaultHandoff("medium", imageReviewed),
+      image_reviewed: imageReviewed,
+    };
+  }
+
+  if (text.includes("cleaner") || text.includes("vacuum") || text.includes("hose")) {
+    return {
+      guidance: imageReviewed
+        ? "Based on the photo and note, this likely points to a cleaner-part request. Visible brand markings or a closer angle can help confirm the exact replacement."
+        : "Cleaner issues often come down to small replacement parts that are hard to describe by name. Upload a close photo and include the cleaner brand if visible.",
+      likely_category: "cleaner_parts",
+      urgency: "normal",
+      suggested_next_step: "Submit this request with a close photo and any visible brand markings.",
+      sales_signal: "unknown",
+      confidence: "medium",
+      handoff_message: defaultHandoff("medium", imageReviewed),
+      image_reviewed: imageReviewed,
+    };
+  }
+
+  if (text.includes("valve") || text.includes("fitting") || text.includes("seal") || text.includes("gasket")) {
+    return {
+      guidance: imageReviewed
+        ? "Based on the photo and note, this likely points to a valve, fitting, seal, or gasket issue. Photos of the connection points and any visible numbers help confirm the right fit."
+        : "This likely points to a valve, fitting, seal, or gasket request. Photos of the part, connection points, and any visible numbers help Big Tex confirm the right fit.",
+      likely_category: "valve_fitting_or_seal",
+      urgency: "normal",
+      suggested_next_step: "Submit this request with close photos of the part and connection points.",
+      sales_signal: "unknown",
+      confidence: "medium",
+      handoff_message: defaultHandoff("medium", imageReviewed),
+      image_reviewed: imageReviewed,
+    };
+  }
+
+  if (text.includes("commercial") || text.includes("route") || text.includes("property") || text.includes("hoa")) {
+    return {
+      guidance: "This likely points to route or property support. Timing, pickup/delivery preference, and item details will help Big Tex route it fast.",
+      likely_category: "commercial_supply",
+      urgency: "high",
+      suggested_next_step: "Submit this request with contact details for fast follow-up.",
+      sales_signal: "commercial_property",
+      confidence: "medium",
+      handoff_message: defaultHandoff("medium", imageReviewed),
+      image_reviewed: imageReviewed,
+    };
+  }
+
+  return {
+    guidance: imageReviewed
+      ? "Based on the photo and note, Big Tex can start narrowing the part, equipment, water, or supply path. A clearer close-up may be needed for exact matching."
+      : "A photo of the part, equipment pad, label, or water color will help Big Tex identify the right product or supply path faster.",
+    likely_category: "general_part_request",
+    urgency: "unknown",
+    suggested_next_step: "Submit this request with a photo and reply method.",
+    sales_signal: "unknown",
+    confidence: imageReviewed ? "medium" : "low",
+    handoff_message: defaultHandoff(imageReviewed ? "medium" : "low", imageReviewed),
+    image_reviewed: imageReviewed,
+  };
+}
+
 async function fileToDataUrl(file: File) {
-  if (!file.type.startsWith("image/")) return null;
+  if (!file || file.size <= 0) return null;
   if (file.size > MAX_IMAGE_BYTES) {
     throw new Error("Image is too large. Please upload a photo under 8MB.");
   }
 
-  const bytes = await file.arrayBuffer();
-  const base64 = Buffer.from(bytes).toString("base64");
-  return `data:${file.type || "image/jpeg"};base64,${base64}`;
+  const type = file.type || "image/jpeg";
+  if (!type.startsWith("image/")) {
+    throw new Error("Please upload an image file.");
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  return `data:${type};base64,${base64}`;
 }
 
-function extractOutputText(payload: any) {
-  if (typeof payload?.output_text === "string") return payload.output_text;
+function parseGatewayText(payload: any) {
+  if (typeof payload?.output_text === "string" && payload.output_text.trim()) return payload.output_text;
 
   const output = payload?.output;
   if (Array.isArray(output)) {
@@ -233,8 +216,7 @@ function extractOutputText(payload: any) {
       const content = item?.content;
       if (!Array.isArray(content)) continue;
       for (const part of content) {
-        if (typeof part?.text === "string") return part.text;
-        if (typeof part?.content === "string") return part.content;
+        if (typeof part?.text === "string" && part.text.trim()) return part.text;
       }
     }
   }
@@ -242,58 +224,33 @@ function extractOutputText(payload: any) {
   return "";
 }
 
-function parseJsonFromModel(text: string) {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const match = trimmed.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    try {
-      return JSON.parse(match[0]);
-    } catch {
-      return null;
-    }
-  }
-}
-
-async function classifyWithGateway(input: ClassifyInput): Promise<Classification> {
+async function classifyWithGateway(input: {
+  message: string;
+  mode?: IntakeMode;
+  urgency?: Urgency;
+  needType?: NeedType;
+  imageDataUrl?: string | null;
+}) {
   const apiKey = getEnv("AI_GATEWAY_API_KEY");
   const model = getEnv("BIGTEX_LLM_MODEL") || DEFAULT_MODEL;
-  const hasImage = Boolean(input.imageDataUrl);
-  const context = `${input.message || ""}\n${getNeedContext(input.needType || "")}\nUrgency option: ${input.urgency || "not_selected"}\nImage attached: ${hasImage ? input.imageName || "yes" : "no"}`;
-  const base = fallbackGuidance(context, hasImage);
+  const imageReviewed = Boolean(input.imageDataUrl);
+  const context = `${input.message || ""}\n${getNeedContext(input.needType || "")}\nUrgency option: ${input.urgency || "not_selected"}`;
+  const base = fallbackGuidance(context, imageReviewed);
   const optionUrgency = mapUrgency(input.urgency || "");
 
   if (!apiKey) {
-    return {
-      ...base,
-      urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency,
-      image_reviewed: hasImage,
-    };
+    return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
   }
 
-  const userContent: Array<Record<string, unknown>> = [
+  const content: any[] = [
     {
       type: "input_text",
-      text: [
-        `Mode: ${input.mode || "ask"}`,
-        `Message: ${input.message || ""}`,
-        getNeedContext(input.needType || ""),
-        `Urgency option: ${input.urgency || "not_selected"}`,
-        hasImage ? "An image is attached. Review the image before responding." : "No image is attached.",
-      ].join("\n"),
+      text: `Mode: ${input.mode || "ask"}\nMessage: ${input.message || ""}\n${getNeedContext(input.needType || "")}\nUrgency option: ${input.urgency || "not_selected"}`,
     },
   ];
 
   if (input.imageDataUrl) {
-    userContent.push({
-      type: "input_image",
-      image_url: input.imageDataUrl,
-      detail: "auto",
-    });
+    content.push({ type: "input_image", image_url: input.imageDataUrl });
   }
 
   try {
@@ -309,11 +266,11 @@ async function classifyWithGateway(input: ClassifyInput): Promise<Classification
           {
             role: "system",
             content:
-              "You are Big Tex Pool Supplies guided intake for Houston pool homeowners, service techs, and commercial operators. Always analyze the image first when one is attached. The image may show a pool part, equipment label, pump pad, fitting, valve, seal, basket, cleaner part, or pool water color. Your job is to narrow the issue and move the customer to a verified outcome. Do not finalize parts, guarantee exact matches, diagnose safety issues, or claim inventory availability. Include water color and chemical guidance when relevant. If the image is unclear, say what additional photo angle or detail is needed. If confidence is medium or high, say what it likely points to and direct the customer to submit the request or call Big Tex to verify before buying. Return only compact JSON with keys: guidance, likely_category, urgency, suggested_next_step, sales_signal, confidence, handoff_message, image_reviewed, image_observation. Guidance must be no more than 2 short sentences. Handoff message must not name any employee.",
+              "You are Big Tex Pool Supplies guided intake for Houston pool homeowners, service techs, and commercial operators. Always analyze the uploaded image first when one is provided. The image may show a pool part, equipment pad, label, valve, fitting, basket, cleaner part, seal, gasket, pump, motor, or pool water color. Your job is to narrow the likely direction and move the customer to a verified outcome. Do not finalize parts, guarantee exact matches, give repair instructions, diagnose safety issues, claim inventory availability, or overpromise same-day availability. If the image is unclear, say what clearer photo is needed. Include water color and chemical guidance when relevant. If confidence is medium or high, say what it likely points to and direct the customer to submit the request or call Big Tex to confirm before buying. If confidence is low, ask for a clearer photo or more detail. Handoff message must not name any employee. Return only compact JSON with keys: guidance, likely_category, urgency, suggested_next_step, sales_signal, confidence, handoff_message, image_reviewed. Guidance must be no more than 2 short sentences.",
           },
           {
             role: "user",
-            content: userContent,
+            content,
           },
         ],
         text: {
@@ -332,9 +289,8 @@ async function classifyWithGateway(input: ClassifyInput): Promise<Classification
                 confidence: { type: "string", enum: ["high", "medium", "low", "unknown"] },
                 handoff_message: { type: "string" },
                 image_reviewed: { type: "boolean" },
-                image_observation: { type: "string" },
               },
-              required: ["guidance", "likely_category", "urgency", "suggested_next_step", "sales_signal", "confidence", "handoff_message", "image_reviewed", "image_observation"],
+              required: ["guidance", "likely_category", "urgency", "suggested_next_step", "sales_signal", "confidence", "handoff_message", "image_reviewed"],
             },
           },
         },
@@ -346,25 +302,17 @@ async function classifyWithGateway(input: ClassifyInput): Promise<Classification
     }
 
     const payload = await response.json();
-    const text = extractOutputText(payload);
-    const parsed = parseJsonFromModel(text) as Partial<Classification> | null;
-    if (!parsed) return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
-
-    const confidence = normalizeConfidence(parsed.confidence || base.confidence);
-    const imageReviewed = hasImage ? parsed.image_reviewed !== false : false;
+    const text = parseGatewayText(payload);
+    const parsed = JSON.parse(text) as Classification;
+    const confidence = parsed.confidence || base.confidence;
 
     return {
       ...base,
       ...parsed,
       confidence,
-      image_reviewed: imageReviewed,
-      image_observation: parsed.image_observation || base.image_observation,
-      handoff_message: parsed.handoff_message || callHandoff(confidence, imageReviewed),
+      image_reviewed: imageReviewed || Boolean(parsed.image_reviewed),
+      handoff_message: parsed.handoff_message || defaultHandoff(confidence, imageReviewed),
       urgency: optionUrgency === "unknown" ? parsed.urgency || base.urgency : optionUrgency,
-      sales_signal: parsed.sales_signal || base.sales_signal,
-      likely_category: parsed.likely_category || base.likely_category,
-      guidance: parsed.guidance || base.guidance,
-      suggested_next_step: parsed.suggested_next_step || base.suggested_next_step,
     };
   } catch {
     return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
@@ -403,7 +351,6 @@ export async function POST(request: NextRequest) {
       guidance: classification.guidance,
       handoffMessage: classification.handoff_message,
       imageReviewed: classification.image_reviewed,
-      imageObservation: classification.image_observation,
       classification,
     });
   }
@@ -417,11 +364,9 @@ export async function POST(request: NextRequest) {
   const urgencyOption = clean(formData.get("urgency"));
   const needType = clean(formData.get("needType"));
   const source = clean(formData.get("source")) || "website";
-  const photoValue = formData.get("photo");
-  const photoFile = photoValue instanceof File && photoValue.size > 0 ? photoValue : null;
-  const hasPhoto = Boolean(photoFile);
-  const imageDataUrl = photoFile ? await fileToDataUrl(photoFile) : null;
-  const imageName = photoFile ? photoFile.name : null;
+  const photo = formData.get("photo");
+  const hasPhoto = photo instanceof File && photo.size > 0;
+  const imageDataUrl = hasPhoto ? await fileToDataUrl(photo) : null;
 
   if (action === "guide") {
     if (!message && !hasPhoto) {
@@ -434,22 +379,18 @@ export async function POST(request: NextRequest) {
       urgency: urgencyOption,
       needType,
       imageDataUrl,
-      imageName,
     });
 
     return json({
       guidance: classification.guidance,
       handoffMessage: classification.handoff_message,
       imageReviewed: classification.image_reviewed,
-      imageObservation: classification.image_observation,
       classification,
     });
   }
 
   if (!replyTo) return json({ error: "Please add a phone number or email so Big Tex can reply." }, 400);
-  if (!message && !hasPhoto) {
-    return json({ error: "Please add a photo or tell Big Tex what you need help with." }, 400);
-  }
+  if (!message && !hasPhoto) return json({ error: "Please add a photo or tell Big Tex what you need help with." }, 400);
 
   const supabase = getSupabase();
   const classification = await classifyWithGateway({
@@ -458,7 +399,6 @@ export async function POST(request: NextRequest) {
     urgency: urgencyOption,
     needType,
     imageDataUrl,
-    imageName,
   });
 
   const { data: lead, error: insertError } = await supabase
@@ -497,13 +437,12 @@ export async function POST(request: NextRequest) {
       confidence: classification.confidence,
       handoff_message: classification.handoff_message,
       image_reviewed: classification.image_reviewed,
-      image_observation: classification.image_observation,
     },
   });
 
-  if (photoFile) {
+  if (hasPhoto) {
     try {
-      const uploaded = await uploadPhoto(photoFile, lead.id);
+      const uploaded = await uploadPhoto(photo, lead.id);
       const { error: updateError } = await supabase
         .from("part_intake_leads")
         .update({
@@ -532,7 +471,6 @@ export async function POST(request: NextRequest) {
       source,
       urgency_option: urgencyOption || null,
       need_type: needType || null,
-      photo_attached: hasPhoto,
       classification,
     },
   });
@@ -540,10 +478,10 @@ export async function POST(request: NextRequest) {
   return json({
     ok: true,
     leadId: lead.id,
-    message: "You’re in. Big Tex will review this and help get you the right part or product path fast.",
+    referenceId: `BTX-${String(lead.id).slice(0, 8).toUpperCase()}`,
+    message: "Big Tex is reviewing your request and will help identify the exact part or solution.",
     guidance: classification.guidance,
-    handoffMessage: classification.handoff_message,
+    handoffMessage: "Call now for fastest confirmation, or wait for a response during business hours.",
     imageReviewed: classification.image_reviewed,
-    imageObservation: classification.image_observation,
   });
 }
