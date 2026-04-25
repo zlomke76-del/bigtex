@@ -67,9 +67,11 @@ type GuideStatus = "idle" | "loading" | "ready" | "error";
 type GuideResult = {
   guidance: string;
   handoffMessage: string;
+  imageReviewed?: boolean;
+  imageObservation?: string;
 };
 
-const starterGuidance = "A photo or short description is enough. Big Tex will narrow the likely part, chemical, or supply path before you buy.";
+const starterGuidance = "A photo or short description is enough. Big Tex will review what you send and narrow the likely part, chemical, or supply path before you buy.";
 
 function getFallbackGuidedResponse(message: string) {
   const text = message.toLowerCase();
@@ -153,17 +155,37 @@ export default function HomePage() {
 
     setGuideStatus("loading");
     try {
-      const response = await fetch("/api/bigtex-intake", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "guide", message: trimmedMessage, urgency, needType }),
-      });
+      let response: Response;
+
+      if (file) {
+        const formData = new FormData();
+        formData.append("action", "guide");
+        formData.append("message", trimmedMessage);
+        formData.append("mode", mode);
+        formData.append("urgency", urgency);
+        formData.append("needType", needType);
+        formData.append("source", "bigtex-homepage-guide");
+        formData.append("photo", file);
+        response = await fetch("/api/bigtex-intake", { method: "POST", body: formData });
+      } else {
+        response = await fetch("/api/bigtex-intake", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "guide", message: trimmedMessage, urgency, needType }),
+        });
+      }
+
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error || "Guided intake is unavailable right now.");
-      setGuideResult({ guidance: payload.guidance || localGuidedResponse, handoffMessage: payload.handoffMessage || localHandoff });
+      setGuideResult({
+        guidance: payload.guidance || localGuidedResponse,
+        handoffMessage: payload.handoffMessage || localHandoff,
+        imageReviewed: Boolean(payload.imageReviewed),
+        imageObservation: payload.imageObservation || "",
+      });
       setGuideStatus("ready");
     } catch {
-      setGuideResult({ guidance: localGuidedResponse, handoffMessage: localHandoff });
+      setGuideResult({ guidance: localGuidedResponse, handoffMessage: localHandoff, imageReviewed: false });
       setGuideStatus("error");
     }
   }
@@ -190,7 +212,7 @@ export default function HomePage() {
 
       setStatus("success");
       setResultMessage(payload.message || "You’re in. Big Tex will review this and help get you the right part or product path fast.");
-      setGuideResult({ guidance: payload.guidance || activeGuidance, handoffMessage: payload.handoffMessage || activeHandoff });
+      setGuideResult({ guidance: payload.guidance || activeGuidance, handoffMessage: payload.handoffMessage || activeHandoff, imageReviewed: Boolean(payload.imageReviewed), imageObservation: payload.imageObservation || "" });
       setGuideStatus("ready");
     } catch (error) {
       setStatus("error");
@@ -248,7 +270,7 @@ export default function HomePage() {
                 <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} />
                 {previewUrl ? (<img className="uploadPreview" src={previewUrl} alt="Selected upload preview" />) : (<span className="uploadIcon">＋</span>)}
                 <strong>{file?.name || "Take a photo of the part, equipment, or water"}</strong>
-                <small>Send what you see: part, label, equipment pad, valve, basket, seal, fitting, or water color.</small>
+                <small>Send what you see: part, label, equipment pad, valve, basket, seal, fitting, or water color. Big Tex will review the photo first.</small>
               </label>
             )}
 
@@ -261,11 +283,11 @@ export default function HomePage() {
             <div className="optionGroup"><span>Urgency</span><div>{urgencyOptions.map((option) => (<button type="button" key={option.value} className={urgency === option.value ? "active" : ""} onClick={() => { setUrgency(option.value); setGuideStatus("idle"); setGuideResult(null); }}>{option.label}</button>))}</div></div>
             <div className="optionGroup"><span>Need type</span><div>{needTypes.map((option) => (<button type="button" key={option.value} className={needType === option.value ? "active" : ""} onClick={() => { setNeedType(option.value); setGuideStatus("idle"); setGuideResult(null); }}>{option.label}</button>))}</div></div>
 
-            <button className="guideButton" type="button" onClick={handleGuideRequest} disabled={guideStatus === "loading"}>{guideStatus === "loading" ? "Checking..." : "Identify the issue"}</button>
+            <button className="guideButton" type="button" onClick={handleGuideRequest} disabled={guideStatus === "loading"}>{guideStatus === "loading" ? (file ? "Analyzing photo..." : "Checking...") : (file ? "Analyze photo" : "Identify the issue")}</button>
 
             {hasGuidance && (
               <div className="issueResult" role="status">
-                <span>{guideStatus === "error" ? "Guidance fallback" : "Likely direction"}</span>
+                <span>{guideStatus === "error" ? "Guidance fallback" : guideResult?.imageReviewed ? "Photo-reviewed direction" : "Likely direction"}</span>
                 <p>{activeGuidance}</p>
                 <div className="nextStep"><strong>Next best step</strong><p>{activeHandoff}</p><a href={`tel:${contact.phoneHref}`}>Call Big Tex</a></div>
               </div>
