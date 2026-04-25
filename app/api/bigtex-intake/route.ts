@@ -11,17 +11,17 @@ const STORAGE_BUCKET = "bigtex-part-uploads";
 
 type IntakeMode = "photo" | "ask" | string;
 type Urgency = "today" | "this_week" | "checking" | string;
-type NeedType = "identify_part" | "check_availability" | "delivery_pickup" | "commercial_route" | string;
-type Confidence = "low" | "medium" | "high" | "unknown";
+type NeedType = "part_equipment" | "water_chemicals" | "delivery_pickup" | "commercial_route" | string;
+type Confidence = "high" | "medium" | "low" | "unknown";
 
 type Classification = {
   guidance: string;
   likely_category: string;
   urgency: "low" | "normal" | "high" | "unknown";
-  confidence: Confidence;
   suggested_next_step: string;
-  handoff_message: string;
   sales_signal: "homeowner" | "service_route" | "commercial_property" | "unknown";
+  confidence: Confidence;
+  handoff_message: string;
 };
 
 function getEnv(name: string) {
@@ -50,104 +50,103 @@ function clean(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function buildHumanHandoff(confidence: Confidence) {
+function callHandoff(confidence: Confidence) {
   if (confidence === "high" || confidence === "medium") {
-    return "We’re pretty sure this is the right path, but Big Tex should verify the right part, chemical path, or supply option before you buy. Call Big Tex to confirm and get it moving.";
+    return "We’re pretty sure this is the right direction. Call Big Tex to confirm the exact part before you buy.";
   }
-
-  return "Send a photo and your best reply method, then Big Tex can verify the part, water issue, or supply path fast.";
+  return "A quick photo or a little more detail will help Big Tex confirm the right next step.";
 }
 
 function fallbackGuidance(input: string): Classification {
   const text = input.toLowerCase();
 
-  if (text.includes("green") || text.includes("cloudy") || text.includes("algae") || text.includes("yellow") || text.includes("brown") || text.includes("water color") || text.includes("chemical") || text.includes("chlorine")) {
+  if (text.includes("green") || text.includes("cloudy") || text.includes("yellow") || text.includes("brown") || text.includes("algae") || text.includes("water")) {
     return {
       guidance:
-        "This sounds like a water-care or chemical support request. A photo of the water color plus any current test reading or product label will help Big Tex narrow the right chemical path. Upload the photo or submit the request so the team can verify before you buy.",
-      likely_category: "water_chemistry",
+        "This looks like a water or chemical guidance request. A clear photo of the water color plus any current chemical readings will help Big Tex point you toward the right treatment path.",
+      likely_category: "water_chemicals",
       urgency: "normal",
-      confidence: "medium",
-      suggested_next_step: "Upload a photo of the water color and any test strip, bottle label, or recent readings.",
-      handoff_message: buildHumanHandoff("medium"),
+      suggested_next_step: "Upload a photo of the water and include any test strip or chemical reading if available.",
       sales_signal: "homeowner",
+      confidence: "medium",
+      handoff_message: "We’re pretty sure this starts with water condition and chemical guidance. Call Big Tex to confirm the best product path before you buy.",
     };
   }
 
   if (text.includes("pump") || text.includes("humming") || text.includes("motor")) {
     return {
       guidance:
-        "This usually points to a pump-side part such as a capacitor, motor, lid, basket, or seal. We’re pretty sure this is the right path, but Big Tex should verify the right part, chemical path, or supply option before you buy. Upload a photo or call Big Tex to confirm.",
+        "This usually points to a pump-side part such as a capacitor, motor, lid, basket, or seal. A photo of the pump label or failed part helps confirm the exact match fast.",
       likely_category: "pump_or_motor",
       urgency: "high",
-      confidence: "medium",
-      suggested_next_step: "Upload a photo and call Big Tex to verify the right pump part before buying.",
-      handoff_message: buildHumanHandoff("medium"),
+      suggested_next_step: "Upload a photo of the pump label, capacitor area, basket lid, or failed part.",
       sales_signal: "unknown",
+      confidence: "medium",
+      handoff_message: "We’re pretty sure this is pump-side. Call Big Tex to confirm the exact part before you buy.",
     };
   }
 
   if (text.includes("pressure") || text.includes("flow") || text.includes("circulation")) {
     return {
       guidance:
-        "Low pressure or weak circulation usually points to a filter, valve, basket, pump, or cleaner-side issue. Big Tex should verify the right part, chemical path, or supply option before you buy. Upload the equipment pad and the visible part, or call Big Tex.",
+        "Low pressure or weak circulation often points toward the filter, valve, basket, pump, or cleaner-side components. A photo of the equipment pad and visible part is the fastest way to narrow it down.",
       likely_category: "flow_or_pressure",
       urgency: "normal",
-      confidence: "medium",
-      suggested_next_step: "Upload the equipment pad and call Big Tex to verify the exact part, chemical, or supply path.",
-      handoff_message: buildHumanHandoff("medium"),
+      suggested_next_step: "Upload the equipment pad and the part in question.",
       sales_signal: "unknown",
+      confidence: "medium",
+      handoff_message: "We’re pretty sure this is flow or pressure related. Call Big Tex to confirm the exact part or supply path before you buy.",
     };
   }
 
   if (text.includes("cleaner") || text.includes("vacuum") || text.includes("hose")) {
     return {
       guidance:
-        "This sounds like a cleaner-side part request, often a small replacement piece that is hard to describe by name. Big Tex should verify the exact fit before you buy. Upload a close photo with any visible brand markings or call Big Tex.",
+        "Cleaner issues often come down to small replacement parts that are hard to describe by name. A close photo and visible brand marking can usually narrow the part quickly.",
       likely_category: "cleaner_parts",
       urgency: "normal",
-      confidence: "medium",
-      suggested_next_step: "Upload the broken cleaner part and call Big Tex to verify the fit.",
-      handoff_message: buildHumanHandoff("medium"),
+      suggested_next_step: "Upload a photo of the cleaner part and any visible brand markings.",
       sales_signal: "unknown",
+      confidence: "medium",
+      handoff_message: "We’re pretty sure this is a cleaner-part request. Call Big Tex to confirm the exact replacement before you buy.",
     };
   }
 
   if (text.includes("valve") || text.includes("fitting") || text.includes("seal") || text.includes("gasket")) {
     return {
       guidance:
-        "This sounds like a valve, fitting, seal, or gasket request. We’re pretty sure this is the right category, but Big Tex should verify the size and connection before you buy. Upload a close photo or call Big Tex.",
+        "This sounds like a valve, fitting, seal, or gasket request. Photos of the part, connection points, and any visible numbers help Big Tex confirm the right fit.",
       likely_category: "valve_fitting_or_seal",
       urgency: "normal",
-      confidence: "medium",
-      suggested_next_step: "Upload a close photo and call Big Tex to verify the size and connection points.",
-      handoff_message: buildHumanHandoff("medium"),
+      suggested_next_step: "Upload a close photo of the part and connection points.",
       sales_signal: "unknown",
+      confidence: "medium",
+      handoff_message: "We’re pretty sure this is a fitting or seal path. Call Big Tex to confirm the exact match before you buy.",
     };
   }
 
   if (text.includes("commercial") || text.includes("route") || text.includes("property") || text.includes("hoa")) {
     return {
       guidance:
-        "This sounds like a route or property support request. Big Tex can verify the part, timing, and pickup or delivery path before anything is ordered. Submit the request or call Big Tex if this affects today’s route.",
+        "This looks like a route or property support request. Include the item needed, timing pressure, and whether pickup or delivery is preferred so Big Tex can route it fast.",
       likely_category: "commercial_supply",
       urgency: "high",
-      confidence: "medium",
-      suggested_next_step: "Submit the request and call Big Tex if this affects today’s route or property operation.",
-      handoff_message: buildHumanHandoff("medium"),
+      suggested_next_step: "Submit the request with contact details for fast follow-up.",
       sales_signal: "commercial_property",
+      confidence: "medium",
+      handoff_message: "Big Tex can help verify the fastest route, pickup, or sourcing path. Call to confirm timing and availability.",
     };
   }
 
   return {
     guidance:
-      "Good intake start. A photo will help Big Tex verify the exact product, part, or supply path before you buy. Upload a photo and submit the request, or call Big Tex if it is urgent.",
+      "Good intake start. A photo of the part, equipment pad, label, or water color will help Big Tex identify the right product or supply path faster.",
     likely_category: "general_part_request",
     urgency: "unknown",
-    confidence: "low",
-    suggested_next_step: "Upload a photo and submit the request so Big Tex can verify the part.",
-    handoff_message: buildHumanHandoff("low"),
+    suggested_next_step: "Upload a photo and submit the request.",
     sales_signal: "unknown",
+    confidence: "low",
+    handoff_message: "A quick photo or more detail will help Big Tex confirm the right part or product path.",
   };
 }
 
@@ -160,12 +159,10 @@ function mapUrgency(option: Urgency): Classification["urgency"] {
 
 function getNeedContext(needType: NeedType) {
   switch (needType) {
-    case "identify_part":
-      return "Need type: identify a part.";
-    case "water_chemistry":
-      return "Need type: water or chemical guidance.";
-    case "check_availability":
-      return "Need type: check availability.";
+    case "part_equipment":
+      return "Need type: part or equipment.";
+    case "water_chemicals":
+      return "Need type: water color or chemicals.";
     case "delivery_pickup":
       return "Need type: delivery or pickup.";
     case "commercial_route":
@@ -187,7 +184,9 @@ async function classifyWithGateway(input: {
   const base = fallbackGuidance(context);
   const optionUrgency = mapUrgency(input.urgency || "");
 
-  if (!apiKey) return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
+  if (!apiKey) {
+    return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
+  }
 
   try {
     const response = await fetch(AI_GATEWAY_URL, {
@@ -201,22 +200,8 @@ async function classifyWithGateway(input: {
         input: [
           {
             role: "system",
-            content: `You are Big Tex Pool Supplies guided intake for Houston pool homeowners, service techs, and commercial operators.
-
-Your job is to narrow the issue and move the customer to a verified Big Tex handoff. This can include parts, equipment, supplies, or water/chemical needs based on photos or short descriptions.
-
-Rules:
-- Do not finalize exact parts or guarantee fit.
-- Do not claim inventory availability.
-- Do not diagnose safety issues.
-- Do not overpromise same-day availability.
-- If the issue involves water color, chemicals, cloudy water, algae, or test readings, request a photo of the water and any available label/test strip.
-- If confidence is medium or high, say what it likely is, then tell the customer Big Tex should verify before they buy.
-- If confidence is low, require a photo and Big Tex verification.
-- Guidance must be no more than 3 short sentences.
-- Always end with a practical next step involving photo upload, submission, or calling Big Tex.
-
-Return only compact JSON with keys: guidance, likely_category, urgency, confidence, suggested_next_step, handoff_message, sales_signal.`,
+            content:
+              "You are Big Tex Pool Supplies guided intake for Houston pool homeowners, service techs, and commercial operators. Your job is to narrow the issue and move the customer to a verified outcome. You do not finalize parts, guarantee exact matches, or claim inventory availability. Include water color and chemical guidance when relevant. If confidence is medium or high, say what it likely is and direct the customer to call Big Tex to confirm before buying. If confidence is low, ask for a photo or more detail. Return only compact JSON with keys: guidance, likely_category, urgency, suggested_next_step, sales_signal, confidence, handoff_message. Guidance must be no more than 2 short sentences. Handoff message must not name any employee.",
           },
           {
             role: "user",
@@ -234,31 +219,33 @@ Return only compact JSON with keys: guidance, likely_category, urgency, confiden
                 guidance: { type: "string" },
                 likely_category: { type: "string" },
                 urgency: { type: "string", enum: ["low", "normal", "high", "unknown"] },
-                confidence: { type: "string", enum: ["low", "medium", "high", "unknown"] },
                 suggested_next_step: { type: "string" },
-                handoff_message: { type: "string" },
                 sales_signal: { type: "string", enum: ["homeowner", "service_route", "commercial_property", "unknown"] },
+                confidence: { type: "string", enum: ["high", "medium", "low", "unknown"] },
+                handoff_message: { type: "string" },
               },
-              required: ["guidance", "likely_category", "urgency", "confidence", "suggested_next_step", "handoff_message", "sales_signal"],
+              required: ["guidance", "likely_category", "urgency", "suggested_next_step", "sales_signal", "confidence", "handoff_message"],
             },
           },
         },
       }),
     });
 
-    if (!response.ok) return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
+    if (!response.ok) {
+      return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
+    }
 
     const payload = await response.json();
     const text = payload.output_text || payload.output?.[0]?.content?.[0]?.text || "";
     const parsed = JSON.parse(text) as Classification;
-    const confidence = parsed.confidence || base.confidence || "unknown";
+    const confidence = parsed.confidence || base.confidence;
 
     return {
       ...base,
       ...parsed,
       confidence,
+      handoff_message: parsed.handoff_message || callHandoff(confidence),
       urgency: optionUrgency === "unknown" ? parsed.urgency || base.urgency : optionUrgency,
-      handoff_message: parsed.handoff_message || buildHumanHandoff(confidence),
     };
   } catch {
     return { ...base, urgency: optionUrgency === "unknown" ? base.urgency : optionUrgency };
@@ -296,7 +283,6 @@ export async function POST(request: NextRequest) {
     return json({
       guidance: classification.guidance,
       handoffMessage: classification.handoff_message,
-      confidence: classification.confidence,
       classification,
     });
   }
@@ -389,9 +375,8 @@ export async function POST(request: NextRequest) {
   return json({
     ok: true,
     leadId: lead.id,
-    message: "You’re in. Big Tex will review this and Big Tex can verify the right part, chemical path, or supply option before you buy.",
+    message: "You’re in. Big Tex will review this and help get you the right part or product path fast.",
     guidance: classification.guidance,
     handoffMessage: classification.handoff_message,
-    confidence: classification.confidence,
   });
 }
