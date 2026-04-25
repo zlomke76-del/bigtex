@@ -15,9 +15,10 @@ const DEFAULT_FROM_EMAIL = "Big Tex Intake <onboarding@resend.dev>";
 
 const resend = getEnv("RESEND_API_KEY") ? new Resend(getEnv("RESEND_API_KEY")) : null;
 
+type CustomerLane = "part_help" | "commercial_express" | string;
 type IntakeMode = "photo" | "ask" | string;
 type Urgency = "today" | "this_week" | "checking" | string;
-type NeedType = "part_equipment" | "water_chemicals" | "delivery_pickup" | "commercial_route" | string;
+type NeedType = "part_equipment" | "water_chemicals" | "delivery_pickup" | "commercial_route" | "chemical_supply" | "route_emergency" | "recurring_support" | string;
 type Confidence = "high" | "medium" | "low" | "unknown";
 
 type Classification = {
@@ -74,9 +75,29 @@ function getNeedContext(needType: NeedType) {
       return "Need type: delivery or pickup.";
     case "commercial_route":
       return "Need type: commercial route support.";
+    case "chemical_supply":
+      return "Need type: commercial chemical supply.";
+    case "route_emergency":
+      return "Need type: commercial route emergency.";
+    case "recurring_support":
+      return "Need type: recurring commercial supply support.";
     default:
       return "Need type: not selected.";
   }
+}
+
+function getCustomerLaneContext(customerLane: CustomerLane, companyName?: string, poolCount?: string) {
+  if (customerLane === "commercial_express") {
+    return [
+      "Customer lane: Commercial Express.",
+      "Treat this as a high-value commercial or route-support lead focused on chemical supply, delivery, parts sourcing, emergency fulfillment, or recurring support.",
+      companyName ? `Company/property: ${companyName}.` : "Company/property: not provided.",
+      poolCount ? `Pools/properties: ${poolCount}.` : "Pools/properties: not provided.",
+    ].join("
+");
+  }
+
+  return "Customer lane: Part Help / homeowner or one-off request.";
 }
 
 function defaultHandoff(confidence: Confidence, imageReviewed: boolean) {
@@ -93,6 +114,23 @@ function defaultHandoff(confidence: Confidence, imageReviewed: boolean) {
 
 function fallbackGuidance(input: string, imageReviewed = false): Classification {
   const text = input.toLowerCase();
+
+  if (text.includes("commercial express") || text.includes("chemical supply") || text.includes("route emergency") || text.includes("recurring commercial")) {
+    return {
+      guidance: imageReviewed
+        ? "Based on the photo and note, this looks like a commercial supply or route-support request. Big Tex can help coordinate chemicals, parts, pickup, delivery, or sourcing to keep the route moving."
+        : "This looks like a commercial supply or route-support request. Big Tex can help coordinate chemicals, parts, pickup, delivery, or sourcing to keep the route moving.",
+      likely_category: "commercial_express",
+      urgency: "high",
+      suggested_next_step: "Submit this Commercial Express request with contact details, timing pressure, and delivery or pickup preference.",
+      sales_signal: "commercial_property",
+      confidence: "medium",
+      handoff_message: imageReviewed
+        ? "Submit this request or call Big Tex to confirm route timing, chemical supply, delivery, or sourcing needs."
+        : "Submit this request or call Big Tex to confirm route timing, chemical supply, delivery, or sourcing needs.",
+      image_reviewed: imageReviewed,
+    };
+  }
 
   if (text.includes("green") || text.includes("cloudy") || text.includes("yellow") || text.includes("brown") || text.includes("algae") || text.includes("water")) {
     return {
@@ -234,6 +272,9 @@ async function classifyWithGateway(input: {
   mode?: IntakeMode;
   urgency?: Urgency;
   needType?: NeedType;
+  customerLane?: CustomerLane;
+  companyName?: string;
+  poolCount?: string;
   imageDataUrl?: string | null;
 }) {
   const apiKey = getEnv("AI_GATEWAY_API_KEY");
@@ -271,7 +312,7 @@ async function classifyWithGateway(input: {
           {
             role: "system",
             content:
-              "You are Big Tex Pool Supplies guided intake for Houston pool homeowners, service techs, and commercial operators. Always analyze the uploaded image first when one is provided. The image may show a pool part, equipment pad, label, valve, fitting, basket, cleaner part, seal, gasket, pump, motor, or pool water color. Your job is to narrow the likely direction and move the customer to a verified outcome. Do not finalize parts, guarantee exact matches, give repair instructions, diagnose safety issues, claim inventory availability, or overpromise same-day availability. If the image is unclear, say what clearer photo is needed. Include water color and chemical guidance when relevant. If confidence is medium or high, say what it likely points to and direct the customer to submit the request or call Big Tex to confirm before buying. If confidence is low, ask for a clearer photo or more detail. Handoff message must not name any employee. Return only compact JSON with keys: guidance, likely_category, urgency, suggested_next_step, sales_signal, confidence, handoff_message, image_reviewed. Guidance must be no more than 2 short sentences.",
+              "You are Big Tex Pool Supplies guided intake for Houston pool homeowners, service techs, and commercial operators. If Customer lane is Commercial Express, prioritize commercial route support, chemical supply, delivery, emergency fulfillment, recurring account potential, and high-value sales follow-up. Always analyze the uploaded image first when one is provided. The image may show a pool part, equipment pad, label, valve, fitting, basket, cleaner part, seal, gasket, pump, motor, or pool water color. Your job is to narrow the likely direction and move the customer to a verified outcome. Do not finalize parts, guarantee exact matches, give repair instructions, diagnose safety issues, claim inventory availability, or overpromise same-day availability. If the image is unclear, say what clearer photo is needed. Include water color and chemical guidance when relevant. If confidence is medium or high, say what it likely points to and direct the customer to submit the request or call Big Tex to confirm before buying. If confidence is low, ask for a clearer photo or more detail. Handoff message must not name any employee. Return only compact JSON with keys: guidance, likely_category, urgency, suggested_next_step, sales_signal, confidence, handoff_message, image_reviewed. Guidance must be no more than 2 short sentences.",
           },
           {
             role: "user",
@@ -311,10 +352,14 @@ async function classifyWithGateway(input: {
     const parsed = JSON.parse(text) as Classification;
     const confidence = parsed.confidence || base.confidence;
 
+    const isCommercialExpress = input.customerLane === "commercial_express";
+
     return {
       ...base,
       ...parsed,
       confidence,
+      sales_signal: isCommercialExpress ? "commercial_property" : parsed.sales_signal || base.sales_signal,
+      likely_category: isCommercialExpress && (!parsed.likely_category || parsed.likely_category === "general_part_request") ? "commercial_express" : parsed.likely_category || base.likely_category,
       image_reviewed: imageReviewed || Boolean(parsed.image_reviewed),
       handoff_message: parsed.handoff_message || defaultHandoff(confidence, imageReviewed),
       urgency: optionUrgency === "unknown" ? parsed.urgency || base.urgency : optionUrgency,
@@ -378,6 +423,9 @@ function buildPlainTextEmail(input: {
   replyTo: string;
   message: string;
   mode: string;
+  customerLane: string;
+  companyName: string;
+  poolCount: string;
   urgencyOption: string;
   needType: string;
   classification: Classification;
@@ -398,6 +446,9 @@ function buildPlainTextEmail(input: {
     "",
     "Context",
     `Mode: ${labelFromValue(input.mode) || "Unknown"}`,
+    `Customer lane: ${input.customerLane === "commercial_express" ? "Commercial Express" : "Part Help"}`,
+    `Company/property: ${input.companyName || "Not provided"}`,
+    `Pools/properties: ${input.poolCount || "Not provided"}`,
     `Selected urgency: ${labelFromValue(input.urgencyOption) || "Not selected"}`,
     `Need type: ${labelFromValue(input.needType) || "Not selected"}`,
     `System urgency: ${urgencyLabel(input.classification.urgency)}`,
@@ -435,6 +486,9 @@ async function sendLeadEmail(input: {
   replyTo: string;
   message: string;
   mode: string;
+  customerLane: string;
+  companyName: string;
+  poolCount: string;
   urgencyOption: string;
   needType: string;
   classification: Classification;
@@ -451,7 +505,10 @@ async function sendLeadEmail(input: {
   const to = getEnv("BIGTEX_NOTIFY_EMAIL") || DEFAULT_NOTIFY_EMAIL;
   const category = labelFromValue(input.classification.likely_category) || "New Request";
   const priority = urgencyLabel(input.classification.urgency);
-  const subject = `New Big Tex Intake — ${category} — ${priority}`;
+  const isCommercialExpress = input.customerLane === "commercial_express";
+  const subject = isCommercialExpress
+    ? `Commercial Express — ${category} — ${priority}`
+    : `New Big Tex Intake — ${category} — ${priority}`;
 
   const safe = {
     referenceId: escapeHtml(referenceId),
@@ -460,6 +517,9 @@ async function sendLeadEmail(input: {
     replyTo: escapeHtml(input.replyTo),
     message: escapeHtml(input.message || "No written note provided."),
     mode: escapeHtml(labelFromValue(input.mode) || "Unknown"),
+    customerLane: escapeHtml(input.customerLane === "commercial_express" ? "Commercial Express" : "Part Help"),
+    companyName: escapeHtml(input.companyName || "Not provided"),
+    poolCount: escapeHtml(input.poolCount || "Not provided"),
     urgencyOption: escapeHtml(labelFromValue(input.urgencyOption) || "Not selected"),
     needType: escapeHtml(labelFromValue(input.needType) || "Not selected"),
     systemUrgency: escapeHtml(priority),
@@ -482,8 +542,8 @@ async function sendLeadEmail(input: {
       <div style="max-width:720px;margin:0 auto;padding:24px;">
         <div style="background:#0b1f4d;color:#ffffff;border-radius:22px 22px 0 0;padding:24px;">
           <div style="font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#c9defc;">Big Tex Pool Supplies</div>
-          <h1 style="margin:8px 0 0;font-size:26px;line-height:1.15;">New intake request</h1>
-          <p style="margin:10px 0 0;color:#e6eefc;">${safe.category} · ${safe.systemUrgency}</p>
+          <h1 style="margin:8px 0 0;font-size:26px;line-height:1.15;">${isCommercialExpress ? "Commercial Express request" : "New intake request"}</h1>
+          <p style="margin:10px 0 0;color:#e6eefc;">${safe.customerLane} · ${safe.category} · ${safe.systemUrgency}</p>
         </div>
 
         <div style="background:#ffffff;border:1px solid #e5ebf4;border-top:0;border-radius:0 0 22px 22px;padding:24px;box-shadow:0 18px 50px rgba(20,38,70,.09);">
@@ -493,6 +553,8 @@ async function sendLeadEmail(input: {
           <table style="width:100%;border-collapse:collapse;margin-bottom:22px;">
             <tr><td style="padding:7px 0;color:#5f6b7a;width:150px;">Name</td><td style="padding:7px 0;font-weight:800;">${safe.name}</td></tr>
             <tr><td style="padding:7px 0;color:#5f6b7a;">Reply</td><td style="padding:7px 0;font-weight:800;">${safe.replyTo}</td></tr>
+            <tr><td style="padding:7px 0;color:#5f6b7a;">Company/property</td><td style="padding:7px 0;font-weight:800;">${safe.companyName}</td></tr>
+            <tr><td style="padding:7px 0;color:#5f6b7a;">Pools/properties</td><td style="padding:7px 0;font-weight:800;">${safe.poolCount}</td></tr>
           </table>
 
           <h2 style="margin:0 0 10px;color:#0b1f4d;font-size:18px;">Customer request</h2>
@@ -500,6 +562,7 @@ async function sendLeadEmail(input: {
 
           <h2 style="margin:0 0 10px;color:#0b1f4d;font-size:18px;">System read</h2>
           <table style="width:100%;border-collapse:collapse;margin-bottom:22px;">
+            <tr><td style="padding:7px 0;color:#5f6b7a;width:150px;">Lane</td><td style="padding:7px 0;font-weight:800;">${safe.customerLane}</td></tr>
             <tr><td style="padding:7px 0;color:#5f6b7a;width:150px;">Need type</td><td style="padding:7px 0;font-weight:800;">${safe.needType}</td></tr>
             <tr><td style="padding:7px 0;color:#5f6b7a;">Selected urgency</td><td style="padding:7px 0;font-weight:800;">${safe.urgencyOption}</td></tr>
             <tr><td style="padding:7px 0;color:#5f6b7a;">Likely category</td><td style="padding:7px 0;font-weight:800;">${safe.category}</td></tr>
@@ -517,7 +580,7 @@ async function sendLeadEmail(input: {
 
           <div style="padding:16px;background:#0b1f4d;color:#ffffff;border-radius:16px;line-height:1.5;">
             <strong>Recommended action:</strong><br/>
-            Review the image and system read, then call or text the customer to confirm the exact part, chemical path, pickup, or delivery next step.
+            ${isCommercialExpress ? "Prioritize this lead: confirm route timing, chemical need, delivery/pickup path, and recurring support potential." : "Review the image and system read, then call or text the customer to confirm the exact part, chemical path, pickup, or delivery next step."}
           </div>
         </div>
       </div>
@@ -531,6 +594,9 @@ async function sendLeadEmail(input: {
     replyTo: input.replyTo,
     message: input.message,
     mode: input.mode,
+    customerLane: input.customerLane,
+    companyName: input.companyName,
+    poolCount: input.poolCount,
     urgencyOption: input.urgencyOption,
     needType: input.needType,
     classification: input.classification,
@@ -552,7 +618,10 @@ export async function POST(request: NextRequest) {
     const message = String(body.message || body.question || "").trim();
     const urgency = String(body.urgency || "").trim();
     const needType = String(body.needType || "").trim();
-    const classification = await classifyWithGateway({ message, mode: "ask", urgency, needType });
+    const customerLane = String(body.customerLane || "part_help").trim();
+    const companyName = String(body.companyName || "").trim();
+    const poolCount = String(body.poolCount || "").trim();
+    const classification = await classifyWithGateway({ message, mode: "ask", urgency, needType, customerLane, companyName, poolCount });
 
     return json({
       guidance: classification.guidance,
@@ -570,6 +639,9 @@ export async function POST(request: NextRequest) {
   const mode = clean(formData.get("mode")) || "photo";
   const urgencyOption = clean(formData.get("urgency"));
   const needType = clean(formData.get("needType"));
+  const customerLane = clean(formData.get("customerLane")) || "part_help";
+  const companyName = clean(formData.get("companyName"));
+  const poolCount = clean(formData.get("poolCount"));
   const source = clean(formData.get("source")) || "website";
   const photo = formData.get("photo");
   const hasPhoto = photo instanceof File && photo.size > 0;
@@ -585,6 +657,9 @@ export async function POST(request: NextRequest) {
       mode,
       urgency: urgencyOption,
       needType,
+      customerLane,
+      companyName,
+      poolCount,
       imageDataUrl,
     });
 
@@ -605,6 +680,9 @@ export async function POST(request: NextRequest) {
     mode,
     urgency: urgencyOption,
     needType,
+    customerLane,
+    companyName,
+    poolCount,
     imageDataUrl,
   });
 
@@ -639,6 +717,9 @@ export async function POST(request: NextRequest) {
     event_payload: {
       urgency_option: urgencyOption || null,
       need_type: needType || null,
+      customer_lane: customerLane,
+      company_name: companyName || null,
+      pool_count: poolCount || null,
       mode,
       source,
       confidence: classification.confidence,
@@ -681,6 +762,9 @@ export async function POST(request: NextRequest) {
       source,
       urgency_option: urgencyOption || null,
       need_type: needType || null,
+      customer_lane: customerLane,
+      company_name: companyName || null,
+      pool_count: poolCount || null,
       classification,
     },
   });
@@ -691,6 +775,9 @@ export async function POST(request: NextRequest) {
     replyTo,
     message,
     mode,
+    customerLane,
+    companyName,
+    poolCount,
     urgencyOption,
     needType,
     classification,
@@ -712,7 +799,9 @@ export async function POST(request: NextRequest) {
     ok: true,
     leadId: lead.id,
     referenceId: `BTX-${String(lead.id).slice(0, 8).toUpperCase()}`,
-    message: "Big Tex is reviewing your request and will help identify the exact part or solution.",
+    message: customerLane === "commercial_express"
+      ? "Big Tex is reviewing your Commercial Express request and will help route the right supply, delivery, chemical, or sourcing path."
+      : "Big Tex is reviewing your request and will help identify the exact part or solution.",
     guidance: classification.guidance,
     handoffMessage: "Call now for fastest confirmation, or wait for a response during business hours.",
     imageReviewed: classification.image_reviewed,
