@@ -4,11 +4,16 @@ export const preferredRegion = "iad1";
 
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { Resend } from "resend";
 
 const AI_GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/responses";
 const DEFAULT_MODEL = "openai/gpt-4.1-mini";
 const STORAGE_BUCKET = "bigtex-part-uploads";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const DEFAULT_NOTIFY_EMAIL = "will@bigtexpoolsupplies.com";
+const DEFAULT_FROM_EMAIL = "Big Tex Intake <onboarding@resend.dev>";
+
+const resend = getEnv("RESEND_API_KEY") ? new Resend(getEnv("RESEND_API_KEY")) : null;
 
 type IntakeMode = "photo" | "ask" | string;
 type Urgency = "today" | "this_week" | "checking" | string;
@@ -335,6 +340,208 @@ async function uploadPhoto(file: File, leadId: string) {
   return { path, mimeType: file.type || null, size: file.size, name: file.name };
 }
 
+type UploadedPhoto = {
+  path: string;
+  mimeType: string | null;
+  size: number;
+  name: string;
+};
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function labelFromValue(value: string) {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function urgencyLabel(value: Classification["urgency"]) {
+  if (value === "high") return "Today / High Priority";
+  if (value === "normal") return "Normal";
+  if (value === "low") return "Low / Checking";
+  return "Unknown";
+}
+
+function buildPlainTextEmail(input: {
+  leadId: string;
+  referenceId: string;
+  name: string;
+  replyTo: string;
+  message: string;
+  mode: string;
+  urgencyOption: string;
+  needType: string;
+  classification: Classification;
+  imageUrl: string | null;
+}) {
+  return [
+    "New Big Tex Intake",
+    "",
+    `Reference: ${input.referenceId}`,
+    `Lead ID: ${input.leadId}`,
+    "",
+    "Customer",
+    `Name: ${input.name || "Not provided"}`,
+    `Reply: ${input.replyTo}`,
+    "",
+    "Request",
+    input.message || "No written note provided.",
+    "",
+    "Context",
+    `Mode: ${labelFromValue(input.mode) || "Unknown"}`,
+    `Selected urgency: ${labelFromValue(input.urgencyOption) || "Not selected"}`,
+    `Need type: ${labelFromValue(input.needType) || "Not selected"}`,
+    `System urgency: ${urgencyLabel(input.classification.urgency)}`,
+    `Sales signal: ${labelFromValue(input.classification.sales_signal)}`,
+    "",
+    "AI Direction",
+    `Likely category: ${labelFromValue(input.classification.likely_category)}`,
+    `Confidence: ${labelFromValue(input.classification.confidence)}`,
+    `Image reviewed: ${input.classification.image_reviewed ? "Yes" : "No"}`,
+    `Guidance: ${input.classification.guidance}`,
+    `Suggested next step: ${input.classification.suggested_next_step}`,
+    "",
+    "Photo",
+    input.imageUrl || "No photo uploaded or signed link unavailable.",
+    "",
+    "Recommended action",
+    "Review the photo and AI direction, then call/text the customer to confirm the exact part, product path, pickup, or delivery next step.",
+  ].join("\n");
+}
+
+async function createSignedPhotoUrl(supabase: ReturnType<typeof getSupabase>, photoPath: string | null) {
+  if (!photoPath) return null;
+
+  const { data, error } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .createSignedUrl(photoPath, 60 * 60 * 24);
+
+  if (error) return null;
+  return data?.signedUrl || null;
+}
+
+async function sendLeadEmail(input: {
+  leadId: string;
+  name: string;
+  replyTo: string;
+  message: string;
+  mode: string;
+  urgencyOption: string;
+  needType: string;
+  classification: Classification;
+  uploadedPhoto: UploadedPhoto | null;
+}) {
+  if (!resend) {
+    return { sent: false, skipped: true, error: "Missing RESEND_API_KEY." };
+  }
+
+  const supabase = getSupabase();
+  const referenceId = `BTX-${String(input.leadId).slice(0, 8).toUpperCase()}`;
+  const imageUrl = await createSignedPhotoUrl(supabase, input.uploadedPhoto?.path || null);
+  const from = getEnv("BIGTEX_FROM_EMAIL") || DEFAULT_FROM_EMAIL;
+  const to = getEnv("BIGTEX_NOTIFY_EMAIL") || DEFAULT_NOTIFY_EMAIL;
+  const category = labelFromValue(input.classification.likely_category) || "New Request";
+  const priority = urgencyLabel(input.classification.urgency);
+  const subject = `New Big Tex Intake — ${category} — ${priority}`;
+
+  const safe = {
+    referenceId: escapeHtml(referenceId),
+    leadId: escapeHtml(input.leadId),
+    name: escapeHtml(input.name || "Not provided"),
+    replyTo: escapeHtml(input.replyTo),
+    message: escapeHtml(input.message || "No written note provided."),
+    mode: escapeHtml(labelFromValue(input.mode) || "Unknown"),
+    urgencyOption: escapeHtml(labelFromValue(input.urgencyOption) || "Not selected"),
+    needType: escapeHtml(labelFromValue(input.needType) || "Not selected"),
+    systemUrgency: escapeHtml(priority),
+    salesSignal: escapeHtml(labelFromValue(input.classification.sales_signal) || "Unknown"),
+    category: escapeHtml(category),
+    confidence: escapeHtml(labelFromValue(input.classification.confidence) || "Unknown"),
+    imageReviewed: input.classification.image_reviewed ? "Yes" : "No",
+    guidance: escapeHtml(input.classification.guidance),
+    nextStep: escapeHtml(input.classification.suggested_next_step),
+    handoff: escapeHtml(input.classification.handoff_message),
+    imageName: escapeHtml(input.uploadedPhoto?.name || "No image uploaded"),
+  };
+
+  const imageSection = imageUrl
+    ? `<a href="${escapeHtml(imageUrl)}" style="display:inline-block;padding:12px 16px;background:#174ea6;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:800;" target="_blank" rel="noreferrer">View uploaded photo</a><div style="margin-top:8px;color:#5f6b7a;font-size:13px;">${safe.imageName} · signed link valid for 24 hours</div>`
+    : `<div style="color:#5f6b7a;">No photo uploaded.</div>`;
+
+  const html = `
+    <div style="margin:0;padding:0;background:#f4f8fd;font-family:Arial,Helvetica,sans-serif;color:#162033;">
+      <div style="max-width:720px;margin:0 auto;padding:24px;">
+        <div style="background:#0b1f4d;color:#ffffff;border-radius:22px 22px 0 0;padding:24px;">
+          <div style="font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#c9defc;">Big Tex Pool Supplies</div>
+          <h1 style="margin:8px 0 0;font-size:26px;line-height:1.15;">New intake request</h1>
+          <p style="margin:10px 0 0;color:#e6eefc;">${safe.category} · ${safe.systemUrgency}</p>
+        </div>
+
+        <div style="background:#ffffff;border:1px solid #e5ebf4;border-top:0;border-radius:0 0 22px 22px;padding:24px;box-shadow:0 18px 50px rgba(20,38,70,.09);">
+          <div style="display:inline-block;margin-bottom:18px;padding:8px 12px;background:#eef6ff;border:1px solid #d7e9ff;border-radius:999px;color:#174ea6;font-size:13px;font-weight:900;">Reference ${safe.referenceId}</div>
+
+          <h2 style="margin:0 0 10px;color:#0b1f4d;font-size:18px;">Customer</h2>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:22px;">
+            <tr><td style="padding:7px 0;color:#5f6b7a;width:150px;">Name</td><td style="padding:7px 0;font-weight:800;">${safe.name}</td></tr>
+            <tr><td style="padding:7px 0;color:#5f6b7a;">Reply</td><td style="padding:7px 0;font-weight:800;">${safe.replyTo}</td></tr>
+          </table>
+
+          <h2 style="margin:0 0 10px;color:#0b1f4d;font-size:18px;">Customer request</h2>
+          <div style="margin-bottom:22px;padding:14px 16px;background:#f7f9fc;border:1px solid #e5ebf4;border-radius:14px;line-height:1.5;">${safe.message}</div>
+
+          <h2 style="margin:0 0 10px;color:#0b1f4d;font-size:18px;">System read</h2>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:22px;">
+            <tr><td style="padding:7px 0;color:#5f6b7a;width:150px;">Need type</td><td style="padding:7px 0;font-weight:800;">${safe.needType}</td></tr>
+            <tr><td style="padding:7px 0;color:#5f6b7a;">Selected urgency</td><td style="padding:7px 0;font-weight:800;">${safe.urgencyOption}</td></tr>
+            <tr><td style="padding:7px 0;color:#5f6b7a;">Likely category</td><td style="padding:7px 0;font-weight:800;">${safe.category}</td></tr>
+            <tr><td style="padding:7px 0;color:#5f6b7a;">Confidence</td><td style="padding:7px 0;font-weight:800;">${safe.confidence}</td></tr>
+            <tr><td style="padding:7px 0;color:#5f6b7a;">Image reviewed</td><td style="padding:7px 0;font-weight:800;">${safe.imageReviewed}</td></tr>
+            <tr><td style="padding:7px 0;color:#5f6b7a;">Sales signal</td><td style="padding:7px 0;font-weight:800;">${safe.salesSignal}</td></tr>
+          </table>
+
+          <h2 style="margin:0 0 10px;color:#0b1f4d;font-size:18px;">Guidance</h2>
+          <div style="margin-bottom:14px;padding:14px 16px;background:#fff7f8;border:1px solid #f4c7cc;border-radius:14px;line-height:1.5;">${safe.guidance}</div>
+          <div style="margin-bottom:22px;padding:14px 16px;background:#eef6ff;border:1px solid #d7e9ff;border-radius:14px;line-height:1.5;"><strong>Next step:</strong> ${safe.nextStep}<br/><strong>Customer handoff:</strong> ${safe.handoff}</div>
+
+          <h2 style="margin:0 0 10px;color:#0b1f4d;font-size:18px;">Uploaded photo</h2>
+          <div style="margin-bottom:22px;">${imageSection}</div>
+
+          <div style="padding:16px;background:#0b1f4d;color:#ffffff;border-radius:16px;line-height:1.5;">
+            <strong>Recommended action:</strong><br/>
+            Review the image and system read, then call or text the customer to confirm the exact part, chemical path, pickup, or delivery next step.
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const text = buildPlainTextEmail({
+    leadId: input.leadId,
+    referenceId,
+    name: input.name,
+    replyTo: input.replyTo,
+    message: input.message,
+    mode: input.mode,
+    urgencyOption: input.urgencyOption,
+    needType: input.needType,
+    classification: input.classification,
+    imageUrl,
+  });
+
+  const { error } = await resend.emails.send({ from, to, subject, html, text });
+  if (error) return { sent: false, skipped: false, error: error.message || "Resend email error." };
+  return { sent: true, skipped: false, error: null };
+}
+
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get("content-type") || "";
 
@@ -440,9 +647,12 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  let uploadedPhoto: UploadedPhoto | null = null;
+
   if (hasPhoto) {
     try {
       const uploaded = await uploadPhoto(photo, lead.id);
+      uploadedPhoto = uploaded;
       const { error: updateError } = await supabase
         .from("part_intake_leads")
         .update({
@@ -472,6 +682,29 @@ export async function POST(request: NextRequest) {
       urgency_option: urgencyOption || null,
       need_type: needType || null,
       classification,
+    },
+  });
+
+  const emailResult = await sendLeadEmail({
+    leadId: lead.id,
+    name,
+    replyTo,
+    message,
+    mode,
+    urgencyOption,
+    needType,
+    classification,
+    uploadedPhoto,
+  });
+
+  await supabase.from("part_intake_events").insert({
+    lead_id: lead.id,
+    event_type: emailResult.sent ? "notification_email_sent" : emailResult.skipped ? "notification_email_skipped" : "notification_email_error",
+    event_payload: {
+      sent: emailResult.sent,
+      skipped: emailResult.skipped,
+      error: emailResult.error,
+      notify_email: getEnv("BIGTEX_NOTIFY_EMAIL") || DEFAULT_NOTIFY_EMAIL,
     },
   });
 
