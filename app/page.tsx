@@ -45,7 +45,8 @@ const operatingSteps = [
 
 const proofPoints = ["Houston supply support", "Commercial routing help", "Hard-to-find parts", "Fast fulfillment path"];
 const contactChips = ["Identify parts fast", "Water color guidance", "Same-day Houston delivery", "Commercial route support"];
-const quickPrompts = ["Pump is humming but not starting", "Water is green or cloudy", "Cleaner part broke", "Need a valve or fitting"];
+const homeQuickPrompts = ["Pump is humming but not starting", "Water is green or cloudy", "Cleaner part broke", "Need a valve or fitting"];
+const commercialQuickPrompts = ["Need chemicals for route today", "Commercial pool is green or cloudy", "Need delivery for multiple pools", "Need hard-to-find part fast"];
 
 const urgencyOptions = [
   { value: "today", label: "Today" },
@@ -53,13 +54,20 @@ const urgencyOptions = [
   { value: "checking", label: "Just checking" },
 ];
 
-const needTypes = [
+const homeNeedTypes = [
   { value: "part_equipment", label: "Part / equipment" },
   { value: "water_chemicals", label: "Water / chemicals" },
   { value: "delivery_pickup", label: "Delivery / pickup" },
-  { value: "commercial_route", label: "Commercial route" },
 ];
 
+const commercialNeedTypes = [
+  { value: "commercial_route", label: "Route support" },
+  { value: "chemical_supply", label: "Chemical supply" },
+  { value: "route_emergency", label: "Route emergency" },
+  { value: "recurring_support", label: "Recurring support" },
+];
+
+type CustomerLane = "part_help" | "commercial_express";
 type IntakeMode = "photo" | "ask";
 type IntakeStatus = "idle" | "submitting" | "success" | "error";
 type GuideStatus = "idle" | "loading" | "ready" | "error";
@@ -90,10 +98,13 @@ function getFallbackHandoff(message: string, hasPhoto: boolean) {
 }
 
 export default function HomePage() {
+  const [customerLane, setCustomerLane] = useState<CustomerLane>("part_help");
   const [mode, setMode] = useState<IntakeMode>("photo");
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
   const [replyTo, setReplyTo] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [poolCount, setPoolCount] = useState("");
   const [urgency, setUrgency] = useState("today");
   const [needType, setNeedType] = useState("part_equipment");
   const [file, setFile] = useState<File | null>(null);
@@ -107,6 +118,11 @@ export default function HomePage() {
   const hasPhoto = Boolean(file);
   const localGuidedResponse = useMemo(() => getFallbackGuidedResponse(message, hasPhoto), [message, hasPhoto]);
   const localHandoff = useMemo(() => getFallbackHandoff(message, hasPhoto), [message, hasPhoto]);
+  const isCommercialExpress = customerLane === "commercial_express";
+  const activeNeedTypes = isCommercialExpress ? commercialNeedTypes : homeNeedTypes;
+  const activeQuickPrompts = isCommercialExpress ? commercialQuickPrompts : homeQuickPrompts;
+  const panelHeadline = isCommercialExpress ? "Commercial Express" : "Big Tex Part Finder";
+  const submitLabel = isCommercialExpress ? "Start Commercial Express" : "Submit & Get Help Fast";
   const hasPreSubmitGuidance = status !== "success" && (guideStatus === "ready" || guideStatus === "error");
   const activeGuidance = guideResult?.guidance || localGuidedResponse;
   const activeHandoff = guideResult?.handoffMessage || localHandoff;
@@ -119,6 +135,9 @@ export default function HomePage() {
     `Name: ${name || ""}`,
     `Reply to: ${replyTo || ""}`,
     `Photo selected: ${file?.name || "No photo selected"}`,
+    `Lane: ${customerLane}`,
+    `Company: ${companyName || ""}`,
+    `Pools / properties: ${poolCount || ""}`,
     `Urgency: ${urgency}`,
     `Need type: ${needType}`,
     `Message: ${message || ""}`,
@@ -158,12 +177,22 @@ export default function HomePage() {
     setMessage("");
     setName("");
     setReplyTo("");
+    setCompanyName("");
+    setPoolCount("");
+    setCustomerLane("part_help");
     setUrgency("today");
     setNeedType("part_equipment");
     setFile(null);
     resetGuidance();
     resetResult();
     setMode("photo");
+  }
+
+  function selectCustomerLane(nextLane: CustomerLane) {
+    setCustomerLane(nextLane);
+    setNeedType(nextLane === "commercial_express" ? "commercial_route" : "part_equipment");
+    resetGuidance();
+    resetResult();
   }
 
   async function handleGuideRequest() {
@@ -186,13 +215,16 @@ export default function HomePage() {
         formData.append("urgency", urgency);
         formData.append("needType", needType);
         formData.append("source", "bigtex-homepage-guide");
+        formData.append("customerLane", customerLane);
+        formData.append("companyName", companyName);
+        formData.append("poolCount", poolCount);
         formData.append("photo", file);
         response = await fetch("/api/bigtex-intake", { method: "POST", body: formData });
       } else {
         response = await fetch("/api/bigtex-intake", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "guide", message: trimmedMessage, urgency, needType }),
+          body: JSON.stringify({ action: "guide", message: trimmedMessage, urgency, needType, customerLane, companyName, poolCount }),
         });
       }
 
@@ -225,6 +257,9 @@ export default function HomePage() {
       formData.append("urgency", urgency);
       formData.append("needType", needType);
       formData.append("source", "bigtex-homepage");
+      formData.append("customerLane", customerLane);
+      formData.append("companyName", companyName);
+      formData.append("poolCount", poolCount);
       if (file) formData.append("photo", file);
 
       const response = await fetch("/api/bigtex-intake", { method: "POST", body: formData });
@@ -247,21 +282,13 @@ export default function HomePage() {
   }
 
   return (
-  <main>
-    <header className="header">
-      <nav className="nav">
-        <a className="logo" href="#top" aria-label="Big Tex Pool Supplies home">
-          <span className="logoMark">TX</span>
-          <span>Big Tex Pool Supplies</span>
-        </a>
-
-        <div className="navLinks" aria-label="Primary navigation">
-          <a href="#supplies">Supplies</a>
-          <a href="#commercial">Commercial</a>
-          <a href="#contact" className="cta">Part Help</a>
-        </div>
-      </nav>
-    </header>
+    <main>
+      <header className="header">
+        <nav className="nav">
+          <a className="logo" href="#top" aria-label="Big Tex Pool Supplies home"><span className="logoMark">TX</span><span>Big Tex Pool Supplies</span></a>
+          <div className="navLinks" aria-label="Primary navigation"><a href="#supplies">Supplies</a><a href="#commercial">Commercial</a><a href="#contact" className="cta">Part Help</a></div>
+        </nav>
+      </header>
 
       <section id="top" className="hero">
         <video className="heroVideo" autoPlay muted loop playsInline preload="metadata" aria-hidden="true"><source src="/video/pool_01.mp4" type="video/mp4" /></video>
@@ -293,31 +320,45 @@ export default function HomePage() {
       <section id="contact" className="section contactSection">
         <div className="contact contactWithImage intakeContact">
           <div className="contactBackdrop" aria-hidden="true" />
-          <div className="contactContent"><div className="eyebrow">Big Tex Part Finder</div><h2>Don’t know the part? Send it or ask.</h2><p>Upload a photo or tell us what is happening. Big Tex will narrow the likely part, chemical, or supply path before you buy.</p><div className="contactChips" aria-label="Fast support options">{contactChips.map((chip) => (<span key={chip}>{chip}</span>))}</div><p className="responseNote">Typical response: 10–15 minutes during business hours.</p><div className="addressCard" aria-label="Big Tex Pool Supplies address"><span className="addressIcon">📍</span><div><strong>Visit Big Tex</strong><span>{contact.addressLine1}</span><span>{contact.addressLine2}</span><span>{contact.cityStateZip}</span></div></div></div>
+          <div className="contactContent"><div className="eyebrow">Part Help + Commercial Express</div><h2>Choose the right lane. Big Tex keeps it moving.</h2><p>Homeowners can get help identifying parts, equipment issues, or water problems. Commercial operators can use Commercial Express for routes, chemicals, delivery, and recurring supply support.</p><div className="contactChips" aria-label="Fast support options">{contactChips.map((chip) => (<span key={chip}>{chip}</span>))}</div><p className="responseNote">Typical response: 10–15 minutes during business hours.</p><div className="addressCard" aria-label="Big Tex Pool Supplies address"><span className="addressIcon">📍</span><div><strong>Visit Big Tex</strong><span>{contact.addressLine1}</span><span>{contact.addressLine2}</span><span>{contact.cityStateZip}</span></div></div></div>
 
           <form className="intakePanel" onSubmit={handleSubmit}>
-            <div className="intakeTopline"><span className="liveDot" />Intake open for Houston pool operators</div>
+            <div className="intakeTopline"><span className="liveDot" />{isCommercialExpress ? "Commercial Express active" : "Part Help active"}</div>
+            <div className="laneSelector" aria-label="Choose intake lane">
+              <button type="button" className={customerLane === "part_help" ? "active" : ""} onClick={() => selectCustomerLane("part_help")}>
+                <strong>Part Help</strong>
+                <span>Home / one-off questions</span>
+              </button>
+              <button type="button" className={customerLane === "commercial_express" ? "active commercial" : "commercial"} onClick={() => selectCustomerLane("commercial_express")}>
+                <strong>Commercial Express</strong>
+                <span>Routes, chemicals, delivery</span>
+              </button>
+            </div>
+            <div className="laneContext">
+              <strong>{panelHeadline}</strong>
+              <span>{isCommercialExpress ? "Priority support for pool service routes, apartments, HOAs, hotels, and operators." : "Upload a photo or ask what you need so Big Tex can narrow it quickly."}</span>
+            </div>
             <div className="intakeTabs" role="tablist" aria-label="Part finder options"><button type="button" className={mode === "photo" ? "active" : ""} onClick={() => { setMode("photo"); resetGuidance(); resetResult(); }}>Upload photo</button><button type="button" className={mode === "ask" ? "active" : ""} onClick={() => { setMode("ask"); resetGuidance(); resetResult(); }}>Ask first</button></div>
 
             {mode === "photo" && (
               <label className={`uploadBox ${previewUrl ? "hasPreview" : ""} ${guideStatus === "loading" ? "isAnalyzing" : ""}`}>
                 <input type="file" accept="image/*" capture="environment" disabled={!canEditIntake} onChange={handleFileChange} />
                 {previewUrl ? (<img className="uploadPreview" src={previewUrl} alt="Selected upload preview" />) : (<span className="uploadIcon">＋</span>)}
-                <strong>{file?.name || "Take a photo of the part, equipment, or water"}</strong>
-                <small>{guideStatus === "loading" && file ? "Analyzing photo..." : "Send what you see: part, label, equipment pad, valve, basket, seal, fitting, or water color."}</small>
+                <strong>{file?.name || (isCommercialExpress ? "Take a photo of the pool, equipment, label, or chemical need" : "Take a photo of the part, equipment, or water")}</strong>
+                <small>{guideStatus === "loading" && file ? "Analyzing photo..." : isCommercialExpress ? "Send route-critical details: water color, equipment pad, chemical need, label, fitting, or part." : "Send what you see: part, label, equipment pad, valve, basket, seal, fitting, or water color."}</small>
               </label>
             )}
 
             {status !== "success" && (
               <>
                 <label className="fieldLabel" htmlFor="intake-message">Tell us what you need help with</label>
-                <textarea id="intake-message" value={message} disabled={!canEditIntake} onChange={(event) => { setMessage(event.target.value); resetGuidance(); resetResult(); }} placeholder="Example: Pump is humming but not starting. I need the right part today." rows={4} />
-                <p className="fieldHelp">One short note is enough. Add brand, model, water color, urgency, pickup/delivery, or route details if you have them.</p>
+                <textarea id="intake-message" value={message} disabled={!canEditIntake} onChange={(event) => { setMessage(event.target.value); resetGuidance(); resetResult(); }} placeholder={isCommercialExpress ? "Example: Need chlorine and acid support for tomorrow's route." : "Example: Pump is humming but not starting. I need the right part today."} rows={4} />
+                <p className="fieldHelp">{isCommercialExpress ? "Add route timing, chemical need, delivery/pickup preference, properties, or urgency." : "One short note is enough. Add brand, model, water color, urgency, pickup/delivery, or route details if you have them."}</p>
 
-                <div className="quickPrompts" aria-label="Common questions">{quickPrompts.map((prompt) => (<button type="button" key={prompt} onClick={() => { setMessage(prompt); resetGuidance(); resetResult(); }}>{prompt}</button>))}</div>
+                <div className="quickPrompts" aria-label="Common questions">{activeQuickPrompts.map((prompt) => (<button type="button" key={prompt} onClick={() => { setMessage(prompt); resetGuidance(); resetResult(); }}>{prompt}</button>))}</div>
 
                 <div className="optionGroup"><span>Urgency</span><div>{urgencyOptions.map((option) => (<button type="button" key={option.value} className={urgency === option.value ? "active" : ""} onClick={() => { setUrgency(option.value); resetGuidance(); resetResult(); }}>{option.label}</button>))}</div></div>
-                <div className="optionGroup"><span>Need type</span><div>{needTypes.map((option) => (<button type="button" key={option.value} className={needType === option.value ? "active" : ""} onClick={() => { setNeedType(option.value); resetGuidance(); resetResult(); }}>{option.label}</button>))}</div></div>
+                <div className="optionGroup"><span>Need type</span><div>{activeNeedTypes.map((option) => (<button type="button" key={option.value} className={needType === option.value ? "active" : ""} onClick={() => { setNeedType(option.value); resetGuidance(); resetResult(); }}>{option.label}</button>))}</div></div>
 
                 <button className="guideButton" type="button" onClick={handleGuideRequest} disabled={guideStatus === "loading"}>{guideStatus === "loading" ? (file ? "Analyzing photo..." : "Checking...") : file ? "Analyze photo" : "Identify the issue"}</button>
 
@@ -329,21 +370,27 @@ export default function HomePage() {
                   </div>
                 )}
 
+                {isCommercialExpress && (
+                  <div className="commercialFields">
+                    <div><label className="fieldLabel" htmlFor="company-name">Company / Property</label><input id="company-name" value={companyName} onChange={(event) => setCompanyName(event.target.value)} placeholder="Company, HOA, hotel, or property" /></div>
+                    <div><label className="fieldLabel" htmlFor="pool-count">Pools / Properties</label><input id="pool-count" value={poolCount} onChange={(event) => setPoolCount(event.target.value)} placeholder="Example: 12 pools / 4 properties" /></div>
+                  </div>
+                )}
                 <div className="fieldGrid"><div><label className="fieldLabel" htmlFor="lead-name">Name</label><input id="lead-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" /></div><div><label className="fieldLabel" htmlFor="lead-reply">Phone or email</label><input id="lead-reply" value={replyTo} onChange={(event) => setReplyTo(event.target.value)} placeholder="Best reply method" /></div></div>
-                <div className="intakeActions"><button className="button buttonPrimary" type="submit" disabled={status === "submitting"}>{status === "submitting" ? "Sending..." : "Submit & Get Help Fast"}</button><a className="button buttonSecondary" href={`mailto:${contact.email}?subject=${mailSubject}&body=${mailBody}`}>Email Request</a></div>
+                <div className="intakeActions"><button className="button buttonPrimary" type="submit" disabled={status === "submitting"}>{status === "submitting" ? "Sending..." : submitLabel}</button><a className="button buttonSecondary" href={`mailto:${contact.email}?subject=${mailSubject}&body=${mailBody}`}>Email Request</a></div>
                 {status === "error" && (<div className="intakeResult error" role="status"><strong>Couldn’t save request.</strong><span>{resultMessage}</span></div>)}
-                {status === "idle" && (<div className="intakeResult" role="status"><strong>Fastest path: send a photo and a reply method.</strong><span>Big Tex uses this intake to identify the part, chemical, or supply path and follow up with the fastest practical next step.</span></div>)}
+                {status === "idle" && (<div className="intakeResult" role="status"><strong>{isCommercialExpress ? "Commercial Express: route support starts here." : "Fastest path: send a photo and a reply method."}</strong><span>{isCommercialExpress ? "Big Tex uses this intake to prioritize chemicals, delivery, sourcing, and recurring commercial supply needs." : "Big Tex uses this intake to identify the part, chemical, or supply path and follow up with the fastest practical next step."}</span></div>)}
               </>
             )}
 
             {status === "success" && (
               <div className="submittedPanel" role="status">
-                <span>You’re all set</span>
-                <h3>Big Tex is reviewing your request.</h3>
-                <p>{resultMessage || "Big Tex will help identify the exact part or solution."}</p>
+                <span>{isCommercialExpress ? "Commercial Express received" : "You’re all set"}</span>
+                <h3>{isCommercialExpress ? "Big Tex is reviewing your commercial supply request." : "Big Tex is reviewing your request."}</h3>
+                <p>{resultMessage || (isCommercialExpress ? "Big Tex will help route your chemical, delivery, part, or recurring support need." : "Big Tex will help identify the exact part or solution.")}</p>
                 {referenceId && <div className="referenceBadge">Reference ID: {referenceId}</div>}
                 <div className="submittedActions"><a className="button buttonPrimary" href={`tel:${contact.phoneHref}`}>Call Big Tex</a><button type="button" className="button buttonSecondary" onClick={handleNewRequest}>Send another request</button></div>
-                <small>Call now for fastest confirmation, or wait for a response during business hours.</small>
+                <small>{isCommercialExpress ? "Call now for urgent route support, or wait for a response during business hours." : "Call now for fastest confirmation, or wait for a response during business hours."}</small>
               </div>
             )}
           </form>
