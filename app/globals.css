@@ -401,7 +401,47 @@ h1 {
 .addressIcon { width: 32px; height: 32px; display: grid; place-items: center; background: rgba(230,57,70,.28); border-radius: 12px; }
 .addressCard strong { display: block; margin-bottom: 4px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
 .addressCard span:not(.addressIcon) { display: block; color: #edf5ff; font-size: 14px; line-height: 1.35; font-weight: 800; }
-.footer { padding: 28px 22px; color: var(--muted); text-align: center; }
+.footer {
+  padding: 36px 22px;
+  background: #0b1f4d; /* anchor it */
+  color: rgba(255,255,255,0.85);
+  text-align: center;
+}
+
+.footerInner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
+}
+
+.footerInner strong {
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.footerInner span {
+  color: rgba(255,255,255,0.7);
+}
+
+.footerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 16px;
+  margin-top: 6px;
+}
+
+.footerLinks a {
+  color: rgba(255,255,255,0.9);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.footerLinks a:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
 
 /* Intake */
 .intakeContact { display: grid; grid-template-columns: minmax(0, .92fr) minmax(360px, .78fr); align-items: center; gap: 34px; }
