@@ -1,0 +1,285 @@
+.page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 6%, rgba(87, 199, 255, 0.14), transparent 30%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+  color: #162033;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 96px 22px 68px;
+  color: white;
+  background:
+    linear-gradient(135deg, rgba(11, 31, 77, 0.96), rgba(16, 45, 112, 0.9)),
+    radial-gradient(circle at 82% 18%, rgba(87, 199, 255, 0.22), transparent 30%);
+}
+
+.heroInner,
+.content,
+.relatedInner {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 28px;
+  color: #dcecff;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.eyebrow {
+  color: #c9defc;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  max-width: 900px;
+  margin: 14px 0 18px;
+  font-size: clamp(40px, 5.4vw, 68px);
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+}
+
+.intro {
+  max-width: 780px;
+  margin: 0;
+  color: #edf5ff;
+  font-size: clamp(18px, 1.7vw, 21px);
+  line-height: 1.6;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.buttonPrimary,
+.buttonSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-weight: 900;
+}
+
+.buttonPrimary {
+  color: white;
+  background: #e63946;
+  box-shadow: 0 16px 34px rgba(230, 57, 70, 0.25);
+}
+
+.buttonSecondary {
+  color: white;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+}
+
+.content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 28px;
+  padding: 54px 22px 72px;
+}
+
+.mainGrid {
+  display: grid;
+  gap: 22px;
+}
+
+.card,
+.sideCard {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(197, 211, 230, 0.88);
+  border-radius: 28px;
+  box-shadow: 0 22px 60px rgba(11, 31, 77, 0.09);
+}
+
+.card {
+  padding: 28px;
+}
+
+.card h2,
+.sideCard h2,
+.related h2 {
+  margin: 0 0 14px;
+  color: #0b1f4d;
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.card p {
+  color: #5f6b7a;
+  line-height: 1.7;
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  position: relative;
+  padding-left: 30px;
+  color: #24324a;
+  line-height: 1.5;
+}
+
+.list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: #174ea6;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.side {
+  position: sticky;
+  top: 96px;
+  align-self: start;
+  display: grid;
+  gap: 16px;
+}
+
+.sideCard {
+  padding: 22px;
+}
+
+.sideCard h2 {
+  font-size: 26px;
+}
+
+.sideCard p {
+  color: #5f6b7a;
+  line-height: 1.6;
+}
+
+.intent {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 7px 10px;
+  color: #e63946;
+  background: rgba(230, 57, 70, 0.09);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.chips span {
+  padding: 7px 10px;
+  color: #174ea6;
+  background: rgba(23, 78, 166, 0.08);
+  border: 1px solid rgba(23, 78, 166, 0.12);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.address {
+  display: grid;
+  gap: 3px;
+  color: #24324a;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.related {
+  padding: 0 22px 82px;
+}
+
+.relatedGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.relatedCard {
+  display: block;
+  padding: 20px;
+  color: #162033;
+  background: white;
+  border: 1px solid rgba(197, 211, 230, 0.88);
+  border-radius: 22px;
+  box-shadow: 0 16px 42px rgba(11, 31, 77, 0.07);
+}
+
+.relatedCard span {
+  display: block;
+  margin-bottom: 7px;
+  color: #e63946;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.relatedCard strong {
+  color: #0b1f4d;
+  font-size: 18px;
+  line-height: 1.18;
+}
+
+@media (max-width: 920px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+
+  .side {
+    position: static;
+  }
+
+  .relatedGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .hero {
+    padding-top: 72px;
+  }
+
+  .heroActions a,
+  .buttonPrimary,
+  .buttonSecondary {
+    width: 100%;
+  }
+
+  .card,
+  .sideCard {
+    padding: 22px;
+    border-radius: 22px;
+  }
+}
