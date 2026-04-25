@@ -15,8 +15,21 @@ function categoryLabel(category: SeoPage["category"]) {
   }
 }
 
+function primaryCtaLabel(category: SeoPage["category"]) {
+  return category === "commercial"
+    ? "Start Commercial Express"
+    : "Upload Photo / Get Part Help";
+}
+
 export function SeoProblemPage({ page }: { page: SeoPage }) {
-  const related = seoPages.filter((item) => item.slug !== page.slug).slice(0, 3);
+  const sameCategory = seoPages.filter(
+    (item) => item.category === page.category && item.slug !== page.slug
+  );
+
+  const fallbackRelated = seoPages.filter((item) => item.slug !== page.slug);
+
+  const related = (sameCategory.length >= 3 ? sameCategory : fallbackRelated).slice(0, 3);
+
   const url = `${siteUrl()}/houston/${page.slug}`;
 
   const jsonLd = {
@@ -48,19 +61,24 @@ export function SeoProblemPage({ page }: { page: SeoPage }) {
 
   return (
     <main className={styles.page}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       <section className={styles.hero}>
         <div className={styles.heroInner}>
           <Link className={styles.backLink} href="/">
             ← Back to Big Tex Pool Supplies
           </Link>
+
           <div className={styles.eyebrow}>{page.eyebrow}</div>
           <h1>{page.h1}</h1>
           <p className={styles.intro}>{page.intro}</p>
+
           <div className={styles.heroActions}>
             <Link className={styles.buttonPrimary} href="/#contact">
-              Upload Photo / Start Intake
+              {primaryCtaLabel(page.category)}
             </Link>
             <a className={styles.buttonSecondary} href={`tel:${businessInfo.phoneHref}`}>
               Call {businessInfo.phone}
@@ -68,6 +86,14 @@ export function SeoProblemPage({ page }: { page: SeoPage }) {
           </div>
         </div>
       </section>
+
+      {page.category === "commercial" && (
+        <section className={styles.commercialBanner}>
+          Built for operators who cannot afford downtime. Big Tex supports pool
+          service routes, apartments, HOAs, hotels, and commercial pools with
+          chemicals, parts, sourcing, pickup, and delivery support.
+        </section>
+      )}
 
       <section className={styles.content}>
         <div className={styles.mainGrid}>
@@ -107,7 +133,7 @@ export function SeoProblemPage({ page }: { page: SeoPage }) {
             <p>{page.ctaText}</p>
             <div className={styles.heroActions}>
               <Link className={styles.buttonPrimary} href="/#contact">
-                Start Big Tex Part Finder
+                {primaryCtaLabel(page.category)}
               </Link>
             </div>
           </div>
@@ -133,6 +159,17 @@ export function SeoProblemPage({ page }: { page: SeoPage }) {
         </aside>
       </section>
 
+      <section className={styles.faq}>
+        <div className={styles.relatedInner}>
+          <h2>Common searches Big Tex can help with</h2>
+          <ul>
+            {page.searchTerms.map((term) => (
+              <li key={term}>{term}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
       <section className={styles.related}>
         <div className={styles.relatedInner}>
           <h2>Related Houston pool supply help</h2>
@@ -144,6 +181,23 @@ export function SeoProblemPage({ page }: { page: SeoPage }) {
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className={styles.bottomCta}>
+        <h2>Still not sure?</h2>
+        <p>
+          Send a photo or call Big Tex. The fastest path is to confirm the part,
+          chemical, or supply route before buying.
+        </p>
+
+        <div className={styles.heroActions}>
+          <Link className={styles.buttonPrimary} href="/#contact">
+            {primaryCtaLabel(page.category)}
+          </Link>
+          <a className={styles.buttonSecondary} href={`tel:${businessInfo.phoneHref}`}>
+            Call {businessInfo.phone}
+          </a>
         </div>
       </section>
     </main>
