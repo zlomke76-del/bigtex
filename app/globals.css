@@ -1237,3 +1237,67 @@ h1 {
   padding-left: 12px;
   padding-right: 12px;
 }
+/* Single-box intake refinement */
+.fieldHelp {
+  max-width: none !important;
+  margin: 7px 0 10px !important;
+  color: var(--muted) !important;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.optionGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 12px 0 12px;
+}
+
+.segmentedControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.segmentedControls button {
+  appearance: none;
+  cursor: pointer;
+  padding: 8px 10px;
+  color: var(--blue);
+  background: rgba(23, 78, 166, 0.08);
+  border: 1px solid rgba(23, 78, 166, 0.14);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.segmentedControls button.selected {
+  color: white;
+  background: linear-gradient(135deg, var(--navy), var(--blue));
+  border-color: rgba(23, 78, 166, 0.58);
+  box-shadow: 0 10px 22px rgba(11, 31, 77, 0.14);
+}
+
+.needControls button {
+  border-radius: 12px;
+}
+
+#part-message {
+  min-height: 102px;
+}
+
+.intakePanel .solaceLite {
+  margin-bottom: 2px;
+}
+
+@media (max-width: 560px) {
+  .segmentedControls button {
+    flex: 1 1 auto;
+  }
+}
